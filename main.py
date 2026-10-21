@@ -1,164 +1,410 @@
+import os
+import sys
 import time
 import math
+import ctypes
+import threading
 import requests
 import xml.etree.ElementTree as ET
+import tkinter as tk
+from tkinter import ttk, messagebox
 from SimConnect import *
 
-# Inserisci il tuo SimBrief Pilot ID
-SIMBRIEF_USER = "312844"
-
-def fetch_simbrief_flightplan_xml(user):
-    """Scarica e analizza l'ultimo piano di volo direttamente dall'API XML di SimBrief."""
-    url = f"https://www.simbrief.com/api/xml.fetcher.php?userid={user}"
-    print(f"Connessione a SimBrief per il recupero dell'OFP (ID: {user})...")
-    
-    try:
-        response = requests.get(url, timeout=10)
-        print(f"Status Code ricevuto: {response.status_code}")
-        
-        if response.status_code == 200:
-            root = ET.fromstring(response.content)
-            waypoints = []
-            
-            # 1. Estrai aeroporto di partenza
-            orig_elem = root.find(".//origin")
-            if orig_elem is not None:
-                icao = orig_elem.find("icao_code")
-                lat = orig_elem.find("pos_lat") if orig_elem.find("pos_lat") is not None else orig_elem.find("lat")
-                lon = orig_elem.find("pos_long") if orig_elem.find("pos_long") is not None else orig_elem.find("lon")
-                if icao is not None and lat is not None and lon is not None:
-                    waypoints.append({
-                        "name": icao.text,
-                        "lat": float(lat.text),
-                        "lon": float(lon.text)
-                    })
-            
-            # 2. Estrai i waypoint di rotta dal navlog (usando pos_lat e pos_long)
-            for fix in root.findall(".//navlog/fix"):
-                ident = fix.find("ident")
-                lat = fix.find("pos_lat")
-                lon = fix.find("pos_long")
-                
-                if ident is not None and lat is not None and lon is not None:
-                    try:
-                        lat_val = float(lat.text)
-                        lon_val = float(lon.text)
-                        if lat_val != 0.0 and lon_val != 0.0:
-                            # Evitiamo doppioni consecutivi identici
-                            if not waypoints or waypoints[-1]["name"] != ident.text:
-                                waypoints.append({
-                                    "name": ident.text,
-                                    "lat": lat_val,
-                                    "lon": lon_val
-                                })
-                    except (ValueError, TypeError):
-                        continue
-            
-            # 3. Estrai aeroporto di arrivo
-            dest_elem = root.find(".//destination")
-            if dest_elem is not None:
-                icao = dest_elem.find("icao_code")
-                lat = dest_elem.find("pos_lat") if dest_elem.find("pos_lat") is not None else dest_elem.find("lat")
-                lon = dest_elem.find("pos_long") if dest_elem.find("pos_long") is not None else dest_elem.find("lon")
-                if icao is not None and lat is not None and lon is not None:
-                    if not waypoints or waypoints[-1]["name"] != icao.text:
-                        waypoints.append({
-                            "name": icao.text,
-                            "lat": float(lat.text),
-                            "lon": float(lon.text)
-                        })
-            
-            print(f"Piano di volo scaricato con successo da SimBrief! ({len(waypoints)} punti totali trovati)")
-            return waypoints
-        else:
-            print(f"Errore HTTP da SimBrief: {response.status_code}")
-            return []
-    except Exception as e:
-        print(f"Errore di connessione o parsing XML con SimBrief: {e}")
-        return []
-
-def calculate_bearing(lat1, lon1, lat2, lon2):
-    """Calcola la rotta (in gradi) tra due punti geografici."""
-    lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
-    dLon = lon2 - lon1
-    x = math.sin(dLon) * math.cos(lat2)
-    y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon)
-    bearing = math.degrees(math.atan2(x, y))
-    return (bearing + 360) % 360
-
-# 1. Recupero dati in remoto da SimBrief
-waypoints = fetch_simbrief_flightplan_xml(SIMBRIEF_USER)
-
-if not waypoints:
-    print("Impossibile procedere: nessun waypoint recuperato da SimBrief.")
-    exit()
-
-print("Waypoint della rotta:")
-for wp in waypoints:
-    print(f" - {wp['name']} ({wp['lat']}, {wp['lon']})")
-
-# 2. Inizializzazione SimConnect per MSFS
-print("\nConnessione a Microsoft Flight Simulator in corso...")
-sm = SimConnect()
-aq = AircraftRequests(sm, _time=1000)
-ae = AircraftEvents(sm)
-
-current_wp_index = 0
-print(f"Inizio navigazione automatica per {len(waypoints)} waypoint...")
-
-# Gestione sicura dell'autopilota
+# Imposta l'AppUserModelID su Windows affinché l'icona appaia anche nella barra delle applicazioni
 try:
-    ap_on = ae.find("AUTOPILOT_ON")
-    if ap_on:
-        ap_on.set(1)
-    print("Comando Autopilota ON inviato.")
-except Exception as e:
-    print(f"Nota autopilota: {e}")
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("eddizor.mb339.simbrief.nav")
+except Exception:
+    pass
 
-print("Sistema di navigazione attivo. Premi Ctrl+C per uscire.")
 
-try:
-    while True:
-        if current_wp_index >= len(waypoints):
-            print("Rotta completata! Destinazione raggiunta.")
-            break
+class MB339NavApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("MB-339 SimBrief GPS Nav System")
+        self.root.geometry("560x660")
+        self.root.configure(bg="#1e1e1e")
+        self.root.resizable(False, False)
 
-        plane_lat = aq.get("PLANE_LATITUDE")
-        plane_lon = aq.get("PLANE_LONGITUDE")
+        # Intercetta la chiusura della finestra dalla "X" in alto a destra
+        self.root.protocol("WM_DELETE_WINDOW", self.quit_app)
 
-        if plane_lat is not None and plane_lon is not None:
-            target = waypoints[current_wp_index]
-            target_lat = target["lat"]
-            target_lon = target["lon"]
-            target_name = target["name"]
-            
-            # Calcola il bearing verso il waypoint corrente
-            bearing = calculate_bearing(plane_lat, plane_lon, target_lat, target_lon)
-            
-            # Imposta l'Heading bug dell'autopilota in MSFS
+        # Imposta e genera l'icona GPS
+        self.setup_gps_icon()
+
+        # Variabili di stato
+        self.simbrief_user = tk.StringVar(value="312844")
+        self.mask_timer = None
+        self.waypoints = []
+        self.current_wp_index = 0
+        self.nav_active = False
+        self.connected = False
+
+        # Oggetti SimConnect
+        self.sm = None
+        self.aq = None
+        self.ae = None
+        self.ev_hdg_set = None
+        self.ev_ap_master = None
+        self.ev_hdg_hold = None
+
+        self.setup_ui()
+
+        # Avvia il timer iniziale di 3 secondi per mascherare il SimBrief ID predefinito
+        self.schedule_id_mask()
+
+        # Avvia il thread di aggiornamento in background
+        self.running = True
+        self.worker_thread = threading.Thread(target=self.sim_loop, daemon=True)
+        self.worker_thread.start()
+
+    def setup_gps_icon(self):
+        """Crea un'icona a tema GPS/Bussola per la barra del titolo e genera gps_icon.ico per l'eseguibile."""
+        ico_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gps_icon.ico")
+
+        # Se esiste già il file .ico (es. generato o impacchettato), lo carica
+        if os.path.exists(ico_path):
             try:
-                hdg_event = ae.find("HEADING_BUG_SET")
-                if hdg_event:
-                    hdg_event.set(int(bearing))
+                self.root.iconbitmap(ico_path)
             except Exception:
                 pass
-            
-            # Calcola distanza approssimativa in gradi (~0.01 = ~1.1 km)
-            dist = math.sqrt((plane_lat - target_lat)**2 + (plane_lon - target_lon)**2)
-            
-            print(f"Verso: {target_name} ({current_wp_index+1}/{len(waypoints)}) | "
-                  f"Pos: {plane_lat:.4f}, {plane_lon:.4f} | Heading da tenere: {bearing:.1f}°")
 
-            # Soglia di passaggio al waypoint successivo (~1.5 km)
-            if dist < 0.015 and current_wp_index > 0:
-                print(f"--> Waypoint {target_name} raggiunto! Passaggio al successivo.")
-                current_wp_index += 1
-            elif dist < 0.015 and current_wp_index == 0:
-                # Se siamo sul punto di partenza e ci stiamo muovendo, passiamo al primo fix dopo il distacco
-                if len(waypoints) > 1:
-                    current_wp_index += 1
+        # Disegna l'icona 32x32 in memoria con PhotoImage (zero dipendenze esterne)
+        icon = tk.PhotoImage(width=32, height=32)
+        cx, cy = 15.5, 15.5
+        for y in range(32):
+            for x in range(32):
+                dist = math.hypot(x - cx, y - cy)
+                # Anello esterno del quadrante GPS
+                if 12.0 <= dist <= 14.2:
+                    icon.put("#00ff66", (x, y))
+                elif dist < 12.0:
+                    icon.put("#141414", (x, y))
+                # Reticolo GPS (croce centrale)
+                if dist < 12.0 and (abs(x - 16) <= 1 or abs(y - 16) <= 1):
+                    if dist > 4.0:
+                        icon.put("#00aa44", (x, y))
+                # Punto satellite / Waypoint attivo al centro
+                if dist <= 3.0:
+                    icon.put("#ff3333" if y < 16 else "#00ff66", (x, y))
 
-        time.sleep(1)
+        self.app_icon = icon  # Mantiene il riferimento per evitare il garbage collection
+        self.root.iconphoto(True, self.app_icon)
 
-except KeyboardInterrupt:
-    print("\nNavigazione interrotta dall'utente. Controllo restituito al pilota.")
+        # Se Pillow è disponibile e gps_icon.ico non esiste ancora, lo salva per PyInstaller
+        if not os.path.exists(ico_path):
+            try:
+                from PIL import Image, ImageDraw
+                img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+                draw = ImageDraw.Draw(img)
+                draw.ellipse((4, 4, 60, 60), fill=(20, 20, 20, 255), outline=(0, 255, 102, 255), width=4)
+                draw.line((32, 8, 32, 56), fill=(0, 180, 80, 255), width=2)
+                draw.line((8, 32, 56, 32), fill=(0, 180, 80, 255), width=2)
+                draw.polygon([(32, 12), (24, 36), (32, 30), (40, 36)], fill=(0, 255, 102, 255))
+                draw.ellipse((28, 28, 36, 36), fill=(255, 60, 60, 255))
+                img.save(ico_path, format="ICO", sizes=[(64, 64), (32, 32), (16, 16)])
+                self.root.iconbitmap(ico_path)
+            except Exception:
+                pass
+
+    def setup_ui(self):
+        style = ttk.Style()
+        style.theme_use("clam")
+
+        # --- FRAME 1: Configurazione SimBrief & SimConnect ---
+        top_frame = tk.Frame(self.root, bg="#252526", bd=1, relief="ridge", padx=10, pady=10)
+        top_frame.pack(fill="x", padx=12, pady=10)
+
+        tk.Label(top_frame, text="SimBrief ID:", fg="#d4d4d4", bg="#252526", font=("Segoe UI", 10, "bold")).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+
+        self.entry_sb = tk.Entry(
+            top_frame,
+            textvariable=self.simbrief_user,
+            width=12,
+            font=("Consolas", 11),
+            bg="#3c3c3c",
+            fg="#ffffff",
+            insertbackground="white"
+        )
+        self.entry_sb.grid(row=0, column=1, padx=5, pady=5)
+
+        # Eventi per mostrare l'ID quando si digita/clicca e mascherarlo con '*' dopo 3 secondi
+        self.entry_sb.bind("<KeyRelease>", self.on_id_activity)
+        self.entry_sb.bind("<FocusIn>", self.on_id_activity)
+
+        btn_sb = tk.Button(top_frame, text="Scarica OFP", command=self.load_simbrief, bg="#007acc", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=8, pady=4)
+        btn_sb.grid(row=0, column=2, padx=8, pady=5)
+
+        self.btn_conn = tk.Button(top_frame, text="Connetti MSFS", command=self.connect_msfs, bg="#388a34", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=8, pady=4)
+        self.btn_conn.grid(row=0, column=3, padx=5, pady=5)
+
+        self.lbl_status = tk.Label(top_frame, text="Stato: Disconnesso da MSFS", fg="#f48771", bg="#252526", font=("Segoe UI", 9, "italic"))
+        self.lbl_status.grid(row=1, column=0, columnspan=4, pady=(5, 0), sticky="w")
+
+        # --- FRAME 2: Display Dati Navigazione (Stile Avionica GPS) ---
+        nav_frame = tk.Frame(self.root, bg="#141414", bd=2, relief="sunken", padx=15, pady=12)
+        nav_frame.pack(fill="x", padx=12, pady=5)
+
+        tk.Label(nav_frame, text="ACTIVE WAYPOINT", fg="#808080", bg="#141414", font=("Consolas", 9, "bold")).grid(row=0, column=0, sticky="w")
+        tk.Label(nav_frame, text="BRG (HDG)", fg="#808080", bg="#141414", font=("Consolas", 9, "bold")).grid(row=0, column=1)
+        tk.Label(nav_frame, text="DIST (NM)", fg="#808080", bg="#141414", font=("Consolas", 9, "bold")).grid(row=0, column=2, sticky="e")
+
+        self.lbl_wp_name = tk.Label(nav_frame, text="---", fg="#00ff66", bg="#141414", font=("Consolas", 22, "bold"))
+        self.lbl_wp_name.grid(row=1, column=0, sticky="w", pady=2)
+
+        self.lbl_brg = tk.Label(nav_frame, text="---°", fg="#00ff66", bg="#141414", font=("Consolas", 22, "bold"))
+        self.lbl_brg.grid(row=1, column=1, padx=40, pady=2)
+
+        self.lbl_dist = tk.Label(nav_frame, text="--.-", fg="#00ff66", bg="#141414", font=("Consolas", 22, "bold"))
+        self.lbl_dist.grid(row=1, column=2, sticky="e", pady=2)
+
+        self.lbl_pos = tk.Label(nav_frame, text="POS: LAT --.----  |  LON --.----", fg="#569cd6", bg="#141414", font=("Consolas", 10))
+        self.lbl_pos.grid(row=2, column=0, columnspan=3, pady=(8, 0), sticky="w")
+
+        # --- FRAME 3: Tabella Waypoint Rotta ---
+        list_frame = tk.Frame(self.root, bg="#1e1e1e")
+        list_frame.pack(fill="both", expand=True, padx=12, pady=8)
+
+        columns = ("idx", "ident", "lat", "lon")
+        self.tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=11)
+        self.tree.heading("idx", text="#")
+        self.tree.heading("ident", text="Waypoint")
+        self.tree.heading("lat", text="Latitudine")
+        self.tree.heading("lon", text="Longitudine")
+
+        self.tree.column("idx", width=45, anchor="center")
+        self.tree.column("ident", width=130, anchor="center")
+        self.tree.column("lat", width=150, anchor="center")
+        self.tree.column("lon", width=150, anchor="center")
+
+        scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscroll=scrollbar.set)
+        self.tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # --- FRAME 4: Controlli Autopilota, Sequenza e Uscita ---
+        ctrl_frame = tk.Frame(self.root, bg="#252526", bd=1, relief="ridge", padx=10, pady=10)
+        ctrl_frame.pack(fill="x", padx=12, pady=10)
+
+        btn_prev = tk.Button(ctrl_frame, text="<< WP Prec.", command=self.prev_wp, bg="#3c3c3c", fg="white", font=("Segoe UI", 9, "bold"), width=11, relief="flat", pady=5)
+        btn_prev.pack(side="left", padx=4)
+
+        self.btn_nav = tk.Button(ctrl_frame, text="AVVIA NAV (HDG)", command=self.toggle_nav, bg="#ce9178", fg="#1e1e1e", font=("Segoe UI", 10, "bold"), width=18, relief="flat", pady=5)
+        self.btn_nav.pack(side="left", expand=True, padx=4)
+
+        btn_next = tk.Button(ctrl_frame, text="WP Succ. >>", command=self.next_wp, bg="#3c3c3c", fg="white", font=("Segoe UI", 9, "bold"), width=11, relief="flat", pady=5)
+        btn_next.pack(side="left", padx=4)
+
+        btn_exit = tk.Button(ctrl_frame, text="ESCI", command=self.quit_app, bg="#c72e2e", fg="white", font=("Segoe UI", 9, "bold"), width=8, relief="flat", pady=5)
+        btn_exit.pack(side="right", padx=4)
+
+    # --- Logica di mascheramento SimBrief ID dopo 3 secondi ---
+    def on_id_activity(self, event=None):
+        """Mostra il SimBrief ID in chiaro durante la modifica e riavvia il timer di 3 secondi."""
+        self.entry_sb.config(show="")
+        self.schedule_id_mask()
+
+    def schedule_id_mask(self):
+        """Programma il mascheramento con asterischi dopo 3000 ms (3 secondi)."""
+        if self.mask_timer is not None:
+            self.root.after_cancel(self.mask_timer)
+        self.mask_timer = self.root.after(3000, self.mask_simbrief_id)
+
+    def mask_simbrief_id(self):
+        """Nasconde l'ID sostituendo i caratteri visibili con asterischi."""
+        if self.simbrief_user.get().strip():
+            self.entry_sb.config(show="*")
+
+    def quit_app(self):
+        """Ferma il ciclo SimConnect e chiude l'applicazione in modo pulito."""
+        self.nav_active = False
+        self.running = False
+        try:
+            if self.sm:
+                self.sm.exit()
+        except Exception:
+            pass
+        self.root.destroy()
+        sys.exit(0)
+
+    def load_simbrief(self):
+        user = self.simbrief_user.get().strip()
+        if not user:
+            messagebox.showwarning("Attenzione", "Inserisci il tuo SimBrief Pilot ID.")
+            return
+
+        # Assicura che dopo il click parta comunque la mascheratura se non già attiva
+        self.schedule_id_mask()
+
+        url = f"https://www.simbrief.com/api/xml.fetcher.php?userid={user}"
+        try:
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                root = ET.fromstring(response.content)
+                wps = []
+
+                # 1. Aeroporto di partenza
+                orig = root.find(".//origin")
+                if orig is not None:
+                    icao = orig.find("icao_code")
+                    lat = orig.find("pos_lat") if orig.find("pos_lat") is not None else orig.find("lat")
+                    lon = orig.find("pos_long") if orig.find("pos_long") is not None else orig.find("lon")
+                    if icao is not None and lat is not None and lon is not None:
+                        wps.append({"name": icao.text, "lat": float(lat.text), "lon": float(lon.text)})
+
+                # 2. Waypoint di rotta
+                for fix in root.findall(".//navlog/fix"):
+                    ident = fix.find("ident")
+                    lat = fix.find("pos_lat")
+                    lon = fix.find("pos_long")
+                    if ident is not None and lat is not None and lon is not None:
+                        try:
+                            lat_v, lon_v = float(lat.text), float(lon.text)
+                            if lat_v != 0.0 and lon_v != 0.0:
+                                if not wps or wps[-1]["name"] != ident.text:
+                                    wps.append({"name": ident.text, "lat": lat_v, "lon": lon_v})
+                        except ValueError:
+                            continue
+
+                # 3. Aeroporto di destinazione
+                dest = root.find(".//destination")
+                if dest is not None:
+                    icao = dest.find("icao_code")
+                    lat = dest.find("pos_lat") if dest.find("pos_lat") is not None else dest.find("lat")
+                    lon = dest.find("pos_long") if dest.find("pos_long") is not None else dest.find("lon")
+                    if icao is not None and lat is not None and lon is not None:
+                        if not wps or wps[-1]["name"] != icao.text:
+                            wps.append({"name": icao.text, "lat": float(lat.text), "lon": float(lon.text)})
+
+                self.waypoints = wps
+                self.current_wp_index = 1 if len(wps) > 1 else 0
+                self.refresh_tree()
+                messagebox.showinfo("SimBrief OFP", f"Piano di volo caricato correttamente!\n{len(wps)} waypoint estratti.")
+            else:
+                messagebox.showerror("Errore SimBrief", f"Errore HTTP: {response.status_code}")
+        except Exception as e:
+            messagebox.showerror("Errore", f"Impossibile scaricare il piano da SimBrief:\n{e}")
+
+    def refresh_tree(self):
+        for row in self.tree.get_children():
+            self.tree.delete(row)
+        for i, wp in enumerate(self.waypoints):
+            prefix = "▶ " if i == self.current_wp_index else ""
+            self.tree.insert("", "end", iid=str(i), values=(f"{prefix}{i+1}", wp["name"], f"{wp['lat']:.4f}", f"{wp['lon']:.4f}"))
+        if self.waypoints and self.current_wp_index < len(self.waypoints):
+            self.tree.selection_set(str(self.current_wp_index))
+            self.tree.see(str(self.current_wp_index))
+
+    def connect_msfs(self):
+        try:
+            self.sm = SimConnect()
+            self.aq = AircraftRequests(self.sm, _time=200)
+            self.ae = AircraftEvents(self.sm)
+
+            self.ev_hdg_set = self.ae.find("HEADING_BUG_SET")
+            self.ev_ap_master = self.ae.find("AP_MASTER")
+            self.ev_hdg_hold = self.ae.find("AP_HDG_HOLD_ON")
+
+            self.connected = True
+            self.lbl_status.config(text="Stato: Connesso a MSFS (SimConnect Attivo)", fg="#4ec9b0")
+            self.btn_conn.config(text="Riconnetti MSFS", bg="#2d6a2e")
+        except Exception as e:
+            self.connected = False
+            self.lbl_status.config(text="Stato: Errore connessione MSFS", fg="#f48771")
+            messagebox.showerror("Errore SimConnect", f"Assicurati che MSFS sia aperto.\nDettaglio: {e}")
+
+    def toggle_nav(self):
+        if not self.connected:
+            messagebox.showwarning("Non Connesso", "Connettiti prima a MSFS!")
+            return
+        if not self.waypoints:
+            messagebox.showwarning("Nessuna Rotta", "Scarica prima il piano di volo da SimBrief!")
+            return
+
+        self.nav_active = not self.nav_active
+        if self.nav_active:
+            self.btn_nav.config(text="NAV ATTIVA (STOP)", bg="#4ec9b0", fg="#1e1e1e")
+            try:
+                if self.ev_hdg_hold:
+                    self.ev_hdg_hold()
+            except Exception:
+                pass
+        else:
+            self.btn_nav.config(text="AVVIA NAV (HDG)", bg="#ce9178", fg="#1e1e1e")
+
+    def prev_wp(self):
+        if self.waypoints and self.current_wp_index > 0:
+            self.current_wp_index -= 1
+            self.refresh_tree()
+
+    def next_wp(self):
+        if self.waypoints and self.current_wp_index < len(self.waypoints) - 1:
+            self.current_wp_index += 1
+            self.refresh_tree()
+
+    @staticmethod
+    def calculate_bearing(lat1, lon1, lat2, lon2):
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dLon = lon2 - lon1
+        x = math.sin(dLon) * math.cos(lat2)
+        y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(dLon) * math.sin(lat2)
+        # Formula standard forward azimuth
+        y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon)
+        return (math.degrees(math.atan2(x, y)) + 360) % 360
+
+    @staticmethod
+    def calculate_distance_nm(lat1, lon1, lat2, lon2):
+        """Calcola la distanza in Miglia Nautiche (NM) con la formula di Haversine."""
+        R_nm = 3440.065
+        lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
+        dlat = lat2 - lat1
+        dlon = lon2 - lon1
+        a = math.sin(dlat / 2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon / 2)**2
+        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+        return R_nm * c
+
+    def sim_loop(self):
+        while self.running:
+            if self.connected and self.aq:
+                try:
+                    p_lat = self.aq.get("PLANE_LATITUDE")
+                    p_lon = self.aq.get("PLANE_LONGITUDE")
+
+                    if p_lat is not None and p_lon is not None and p_lat != 0.0:
+                        self.root.after(0, self.lbl_pos.config, {"text": f"POS: LAT {p_lat:.4f}  |  LON {p_lon:.4f}"})
+
+                        if self.waypoints and self.current_wp_index < len(self.waypoints):
+                            target = self.waypoints[self.current_wp_index]
+                            brg = self.calculate_bearing(p_lat, p_lon, target["lat"], target["lon"])
+                            dist_nm = self.calculate_distance_nm(p_lat, p_lon, target["lat"], target["lon"])
+
+                            self.root.after(0, self.update_telemetry_ui, target["name"], brg, dist_nm)
+
+                            if self.nav_active:
+                                if self.ev_hdg_set:
+                                    try:
+                                        self.ev_hdg_set(int(round(brg)))
+                                    except Exception:
+                                        pass
+
+                                # Passaggio automatico al waypoint successivo sotto 0.8 NM (~1.5 km)
+                                if dist_nm < 0.8:
+                                    if self.current_wp_index < len(self.waypoints) - 1:
+                                        self.current_wp_index += 1
+                                        self.root.after(0, self.refresh_tree)
+                                    else:
+                                        self.nav_active = False
+                                        self.root.after(0, self.btn_nav.config, {"text": "ROTTA COMPLETATA", "bg": "#6a9955"})
+                except Exception:
+                    pass
+            time.sleep(1)
+
+    def update_telemetry_ui(self, name, brg, dist_nm):
+        self.lbl_wp_name.config(text=name)
+        self.lbl_brg.config(text=f"{int(round(brg)):03d}°")
+        self.lbl_dist.config(text=f"{dist_nm:.1f}")
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = MB339NavApp(root)
+    root.mainloop()
