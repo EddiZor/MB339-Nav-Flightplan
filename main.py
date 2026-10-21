@@ -198,80 +198,87 @@ class MB339NavApp:
         btn_exit.pack(side="right", padx=4)
 
     def toggle_howto(self):
-        """Apre o chiude la finestra HOW TO a destra della finestra principale."""
+        """Apre o chiude la finestra HOWTO (più larga, adatta a evitare lo scroll)."""
         if self.howto_win is not None and tk.Toplevel.winfo_exists(self.howto_win):
-            # Se la finestra è già aperta, la chiude
             self.howto_win.destroy()
             self.howto_win = None
         else:
-            # Altrimenti la crea e la posiziona a destra
             self.howto_win = tk.Toplevel(self.root)
-            self.howto_win.title("HOW TO - MB-339 Cockpit Setup")
+            self.howto_win.title("HOW TO - MB-339 Cockpit Setup & Guida")
             
             x = self.root.winfo_rootx()
             y = self.root.winfo_rooty()
-            width = self.root.winfo_width()
+            height = self.root.winfo_height()
             
-            self.howto_win.geometry(f"520x460+{x + width + 10}+{y}")
-            self.howto_win.configure(bg="#252526")
+            # Larghezza aumentata a 680 pixel per evitare lo scroll del testo
+            howto_width = 680
+            self.howto_win.geometry(f"{howto_width}x{height}+{x + 560 + 10}+{y}")
+            self.howto_win.configure(bg="#1e1e1e")
             self.howto_win.resizable(False, False)
             
-            # Intercetta la chiusura con la "X" per azzerare il riferimento
             self.howto_win.protocol("WM_DELETE_WINDOW", self.close_howto)
 
+            # Titolo
             header_lbl = tk.Label(
                 self.howto_win, 
-                text="Istruzioni Operative per il Cockpit (MB-339)", 
+                text="GUIDA OPERATIVA & COCKPIT SETUP", 
                 fg="#4ec9b0", 
-                bg="#252526", 
-                font=("Segoe UI", 11, "bold")
+                bg="#1e1e1e", 
+                font=("Segoe UI", 13, "bold")
             )
-            header_lbl.pack(pady=(15, 10), padx=15, anchor="w")
+            header_lbl.pack(pady=(20, 10), padx=20, anchor="w")
 
+            # Testo dettagliato
             instructions = (
-                "1. PREPARAZIONE AUTOPILOTA & FLIGHT DIRECTOR:\n"
-                "   • Individua il pannello del Flight Director / Autopilota sul glareshield centrale.\n"
+                "1. COLLEGAMENTO E SIMBRIEF:\n"
+                "   • Inserisci il tuo SimBrief Pilot ID nella schermata principale.\n"
+                "   • Clicca su 'Scarica OFP' per estrarre la rotta e tutti i waypoint.\n"
+                "   • Clicca su 'Connetti MSFS' per attivare il ponte SimConnect.\n\n"
+                "2. SETUP NEL COCKPIT DELL'MB-339:\n"
+                "   • Accendi l'impianto elettrico e l'avionica del velivolo.\n"
+                "   • Individua il pannello del Flight Director / Autopilota sul glareshield.\n"
                 "   • Assicurati che l'autopilota sia inserito (Master ON).\n"
-                "   • Premi il pulsante HDG (Heading) sul pannello per fare in modo che\n"
-                "     l'aeromobile segua la prua impostata dal bug di direzione.\n"
-                "   • Se desideri mantenere la quota di crociera, inserisci ALT HOLD\n"
-                "     una volta raggiunto il livello di volo desiderato.\n\n"
-                "2. SINCRONIZZAZIONE E AVVIO DELLA NAVIGAZIONE:\n"
-                "   • Inserisci il tuo SimBrief Pilot ID e clicca su 'Scarica OFP'.\n"
-                "   • Clicca su 'Connetti MSFS' per attivare il ponte SimConnect.\n"
-                "   • Quando sei pronto al decollo o in volo, clicca sul pulsante\n"
-                "     centrale 'AVVIA NAV (HDG)' nell'applicazione.\n"
-                "   • L'app aggiornerà automaticamente in tempo reale l'Heading Bug\n"
-                "     guidando l'MB-339 attraverso tutti i waypoint della rotta."
+                "   • Premi il pulsante HDG (Heading) per abilitare il controllo di prua.\n"
+                "   • Se desideri mantenere la quota, inserisci ALT HOLD a quota di crociera.\n\n"
+                "3. NAVIGAZIONE AUTOMATICA:\n"
+                "   • Clicca su 'AVVIA NAV (HDG)' nell'applicazione.\n"
+                "   • L'utility calcolerà in tempo reale il rilevamento (Bearing) e\n"
+                "     aggiornerà automaticamente l'Heading Bug sul tuo HSI.\n"
+                "   • Al raggiungimento del waypoint (sotto 0.8 NM), l'app passerà\n"
+                "     in automatico al punto successivo fino a destinazione.\n\n"
+                "4. GESTIONE MANUALE DELLA ROTTA:\n"
+                "   • Usa i pulsanti '<< WP Prec.' e 'WP Succ. >>' per saltare o\n"
+                "     selezionare manualmente qualsiasi waypoint in tempo reale."
             )
 
             txt_box = tk.Text(
                 self.howto_win, 
                 wrap="word", 
-                bg="#1e1e1e", 
+                bg="#141414", 
                 fg="#d4d4d4", 
-                font=("Consolas", 10), 
-                padx=12, 
-                pady=12, 
-                bd=0, 
+                font=("Consolas", 12), 
+                padx=15, 
+                pady=15, 
+                bd=2, 
+                relief="sunken",
                 highlightthickness=0
             )
             txt_box.insert("1.0", instructions)
             txt_box.config(state="disabled")
-            txt_box.pack(fill="both", expand=True, padx=15, pady=5)
+            txt_box.pack(fill="both", expand=True, padx=20, pady=10)
 
             btn_close = tk.Button(
                 self.howto_win, 
-                text="CHIUDI", 
+                text="CHIUDI GUIDA", 
                 command=self.close_howto, 
-                bg="#007acc", 
+                bg="#c72e2e", 
                 fg="white", 
-                font=("Segoe UI", 9, "bold"), 
+                font=("Segoe UI", 10, "bold"), 
                 relief="flat", 
-                padx=15, 
-                pady=6
+                padx=20, 
+                pady=8
             )
-            btn_close.pack(pady=15)
+            btn_close.pack(pady=20)
 
     def close_howto(self):
         """Chiude la finestra HOW TO e pulisce il riferimento."""
