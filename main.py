@@ -10,7 +10,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from SimConnect import *
 
-# Imposta l'AppUserModelID su Windows affinché l'icona appaia anche nella barra delle applicazioni
+# Imposta l'AppUserModelID su Windows affinché l'icona appaia nella barra delle applicazioni
 try:
     ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("eddizor.mb339.simbrief.nav")
 except Exception:
@@ -58,40 +58,38 @@ class MB339NavApp:
         self.worker_thread.start()
 
     def setup_gps_icon(self):
-        """Crea un'icona a tema GPS/Bussola per la barra del titolo e genera gps_icon.ico per l'eseguibile."""
-        ico_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gps_icon.ico")
+        """Carica l'icona sia in modalità script che dentro l'eseguibile PyInstaller."""
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
+        ico_path = os.path.join(base_path, "gps_icon.ico")
 
-        # Se esiste già il file .ico (es. generato o impacchettato), lo carica
         if os.path.exists(ico_path):
             try:
                 self.root.iconbitmap(ico_path)
             except Exception:
                 pass
 
-        # Disegna l'icona 32x32 in memoria con PhotoImage (zero dipendenze esterne)
+        # Disegna l'icona 32x32 in memoria con PhotoImage
         icon = tk.PhotoImage(width=32, height=32)
         cx, cy = 15.5, 15.5
         for y in range(32):
             for x in range(32):
                 dist = math.hypot(x - cx, y - cy)
-                # Anello esterno del quadrante GPS
                 if 12.0 <= dist <= 14.2:
                     icon.put("#00ff66", (x, y))
                 elif dist < 12.0:
                     icon.put("#141414", (x, y))
-                # Reticolo GPS (croce centrale)
                 if dist < 12.0 and (abs(x - 16) <= 1 or abs(y - 16) <= 1):
                     if dist > 4.0:
                         icon.put("#00aa44", (x, y))
-                # Punto satellite / Waypoint attivo al centro
                 if dist <= 3.0:
                     icon.put("#ff3333" if y < 16 else "#00ff66", (x, y))
 
-        self.app_icon = icon  # Mantiene il riferimento per evitare il garbage collection
+        self.app_icon = icon
         self.root.iconphoto(True, self.app_icon)
 
-        # Se Pillow è disponibile e gps_icon.ico non esiste ancora, lo salva per PyInstaller
-        if not os.path.exists(ico_path):
+        # Se il file non esiste, prova a crearne uno locale per PyInstaller
+        local_ico = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gps_icon.ico")
+        if not os.path.exists(local_ico):
             try:
                 from PIL import Image, ImageDraw
                 img = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
@@ -101,8 +99,7 @@ class MB339NavApp:
                 draw.line((8, 32, 56, 32), fill=(0, 180, 80, 255), width=2)
                 draw.polygon([(32, 12), (24, 36), (32, 30), (40, 36)], fill=(0, 255, 102, 255))
                 draw.ellipse((28, 28, 36, 36), fill=(255, 60, 60, 255))
-                img.save(ico_path, format="ICO", sizes=[(64, 64), (32, 32), (16, 16)])
-                self.root.iconbitmap(ico_path)
+                img.save(local_ico, format="ICO", sizes=[(64, 64), (32, 32), (16, 16)])
             except Exception:
                 pass
 
@@ -110,7 +107,6 @@ class MB339NavApp:
         style = ttk.Style()
         style.theme_use("clam")
 
-        # --- FRAME 1: Configurazione SimBrief & SimConnect ---
         top_frame = tk.Frame(self.root, bg="#252526", bd=1, relief="ridge", padx=10, pady=10)
         top_frame.pack(fill="x", padx=12, pady=10)
 
@@ -127,7 +123,6 @@ class MB339NavApp:
         )
         self.entry_sb.grid(row=0, column=1, padx=5, pady=5)
 
-        # Eventi per mostrare l'ID quando si digita/clicca e mascherarlo con '*' dopo 3 secondi
         self.entry_sb.bind("<KeyRelease>", self.on_id_activity)
         self.entry_sb.bind("<FocusIn>", self.on_id_activity)
 
@@ -140,7 +135,6 @@ class MB339NavApp:
         self.lbl_status = tk.Label(top_frame, text="Stato: Disconnesso da MSFS", fg="#f48771", bg="#252526", font=("Segoe UI", 9, "italic"))
         self.lbl_status.grid(row=1, column=0, columnspan=4, pady=(5, 0), sticky="w")
 
-        # --- FRAME 2: Display Dati Navigazione (Stile Avionica GPS) ---
         nav_frame = tk.Frame(self.root, bg="#141414", bd=2, relief="sunken", padx=15, pady=12)
         nav_frame.pack(fill="x", padx=12, pady=5)
 
@@ -160,7 +154,6 @@ class MB339NavApp:
         self.lbl_pos = tk.Label(nav_frame, text="POS: LAT --.----  |  LON --.----", fg="#569cd6", bg="#141414", font=("Consolas", 10))
         self.lbl_pos.grid(row=2, column=0, columnspan=3, pady=(8, 0), sticky="w")
 
-        # --- FRAME 3: Tabella Waypoint Rotta ---
         list_frame = tk.Frame(self.root, bg="#1e1e1e")
         list_frame.pack(fill="both", expand=True, padx=12, pady=8)
 
@@ -181,7 +174,6 @@ class MB339NavApp:
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # --- FRAME 4: Controlli Autopilota, Sequenza e Uscita ---
         ctrl_frame = tk.Frame(self.root, bg="#252526", bd=1, relief="ridge", padx=10, pady=10)
         ctrl_frame.pack(fill="x", padx=12, pady=10)
 
@@ -197,25 +189,20 @@ class MB339NavApp:
         btn_exit = tk.Button(ctrl_frame, text="ESCI", command=self.quit_app, bg="#c72e2e", fg="white", font=("Segoe UI", 9, "bold"), width=8, relief="flat", pady=5)
         btn_exit.pack(side="right", padx=4)
 
-    # --- Logica di mascheramento SimBrief ID dopo 3 secondi ---
     def on_id_activity(self, event=None):
-        """Mostra il SimBrief ID in chiaro durante la modifica e riavvia il timer di 3 secondi."""
         self.entry_sb.config(show="")
         self.schedule_id_mask()
 
     def schedule_id_mask(self):
-        """Programma il mascheramento con asterischi dopo 3000 ms (3 secondi)."""
         if self.mask_timer is not None:
             self.root.after_cancel(self.mask_timer)
         self.mask_timer = self.root.after(3000, self.mask_simbrief_id)
 
     def mask_simbrief_id(self):
-        """Nasconde l'ID sostituendo i caratteri visibili con asterischi."""
         if self.simbrief_user.get().strip():
             self.entry_sb.config(show="*")
 
     def quit_app(self):
-        """Ferma il ciclo SimConnect e chiude l'applicazione in modo pulito."""
         self.nav_active = False
         self.running = False
         try:
@@ -232,7 +219,6 @@ class MB339NavApp:
             messagebox.showwarning("Attenzione", "Inserisci il tuo SimBrief Pilot ID.")
             return
 
-        # Assicura che dopo il click parta comunque la mascheratura se non già attiva
         self.schedule_id_mask()
 
         url = f"https://www.simbrief.com/api/xml.fetcher.php?userid={user}"
@@ -242,7 +228,6 @@ class MB339NavApp:
                 root = ET.fromstring(response.content)
                 wps = []
 
-                # 1. Aeroporto di partenza
                 orig = root.find(".//origin")
                 if orig is not None:
                     icao = orig.find("icao_code")
@@ -251,7 +236,6 @@ class MB339NavApp:
                     if icao is not None and lat is not None and lon is not None:
                         wps.append({"name": icao.text, "lat": float(lat.text), "lon": float(lon.text)})
 
-                # 2. Waypoint di rotta
                 for fix in root.findall(".//navlog/fix"):
                     ident = fix.find("ident")
                     lat = fix.find("pos_lat")
@@ -265,7 +249,6 @@ class MB339NavApp:
                         except ValueError:
                             continue
 
-                # 3. Aeroporto di destinazione
                 dest = root.find(".//destination")
                 if dest is not None:
                     icao = dest.find("icao_code")
@@ -346,14 +329,11 @@ class MB339NavApp:
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
         dLon = lon2 - lon1
         x = math.sin(dLon) * math.cos(lat2)
-        y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(dLon) * math.sin(lat2)
-        # Formula standard forward azimuth
         y = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(dLon)
         return (math.degrees(math.atan2(x, y)) + 360) % 360
 
     @staticmethod
     def calculate_distance_nm(lat1, lon1, lat2, lon2):
-        """Calcola la distanza in Miglia Nautiche (NM) con la formula di Haversine."""
         R_nm = 3440.065
         lat1, lon1, lat2, lon2 = map(math.radians, [lat1, lon1, lat2, lon2])
         dlat = lat2 - lat1
@@ -386,7 +366,6 @@ class MB339NavApp:
                                     except Exception:
                                         pass
 
-                                # Passaggio automatico al waypoint successivo sotto 0.8 NM (~1.5 km)
                                 if dist_nm < 0.8:
                                     if self.current_wp_index < len(self.waypoints) - 1:
                                         self.current_wp_index += 1
