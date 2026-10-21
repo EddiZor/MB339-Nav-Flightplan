@@ -32,7 +32,7 @@ class MB339NavApp:
         self.setup_gps_icon()
 
         # Variabili di stato
-        self.simbrief_user = tk.StringVar(value="312844")
+        self.simbrief_user = tk.StringVar(value="******")
         self.mask_timer = None
         self.waypoints = []
         self.current_wp_index = 0
