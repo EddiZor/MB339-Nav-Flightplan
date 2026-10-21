@@ -21,7 +21,7 @@ class MB339NavApp:
     def __init__(self, root):
         self.root = root
         self.root.title("MB-339 SimBrief GPS Nav System")
-        self.root.geometry("740x690")
+        self.root.geometry("700x690")
         self.root.configure(bg="#1e1e1e")
         self.root.resizable(False, False)
 
@@ -32,7 +32,7 @@ class MB339NavApp:
         self.setup_gps_icon()
 
         # Variabili di stato
-        self.simbrief_user = tk.StringVar(value="******")
+        self.simbrief_user = tk.StringVar(value="312844")
         self.mask_timer = None
         self.waypoints = []
         self.current_wp_index = 0
@@ -40,10 +40,9 @@ class MB339NavApp:
         self.connected = False
         self.howto_win = None
         
-        # Coordinate e Heading attuali dell'aereo
+        # Coordinate attuali dell'aereo
         self.plane_lat = None
         self.plane_lon = None
-        self.plane_hdg = 0.0
 
         # Oggetti SimConnect
         self.sm = None
@@ -64,6 +63,7 @@ class MB339NavApp:
         self.worker_thread.start()
 
     def setup_gps_icon(self):
+        """Carica l'icona sia in modalità script che dentro l'eseguibile PyInstaller."""
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         ico_path = os.path.join(base_path, "gps_icon.ico")
 
@@ -162,23 +162,30 @@ class MB339NavApp:
         self.lbl_pos = tk.Label(nav_frame, text="POS: LAT --.----  |  LON --.----", fg="#569cd6", bg="#141414", font=("Consolas", 10))
         self.lbl_pos.grid(row=2, column=0, columnspan=3, pady=(8, 0), sticky="w")
 
-        # --- FRAME 3: Tabella Waypoint Rotta con TO/FROM a sinistra ---
+        # --- FRAME 3: Tabella Waypoint Rotta (Selezione da mouse disattivata) ---
         list_frame = tk.Frame(self.root, bg="#1e1e1e")
         list_frame.pack(fill="both", expand=True, padx=12, pady=8)
 
         columns = ("idx", "ident", "lat", "lon", "dist")
-        self.tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=11)
+        self.tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=11, selectmode="browse")
         self.tree.heading("idx", text="#")
         self.tree.heading("ident", text="Waypoint")
         self.tree.heading("lat", text="Latitudine")
         self.tree.heading("lon", text="Longitudine")
-        self.tree.heading("dist", text="Direzione & Distanza")
+        self.tree.heading("dist", text="Distanza (NM)")
 
-        self.tree.column("idx", width=40, anchor="center")
-        self.tree.column("ident", width=110, anchor="center")
-        self.tree.column("lat", width=130, anchor="center")
-        self.tree.column("lon", width=130, anchor="center")
-        self.tree.column("dist", width=180, anchor="center")
+        self.tree.column("idx", width=45, anchor="center")
+        self.tree.column("ident", width=115, anchor="center")
+        self.tree.column("lat", width=135, anchor="center")
+        self.tree.column("lon", width=135, anchor="center")
+        self.tree.column("dist", width=140, anchor="center")
+
+        # Disattiva la selezione manuale col mouse e con le frecce della tastiera sulla lista
+        self.tree.bind("<Button-1>", self.disable_tree_click)
+        self.tree.bind("<ButtonRelease-1>", self.disable_tree_click)
+        self.tree.bind("<B1-Motion>", self.disable_tree_click)
+        self.tree.bind("<Double-1>", self.disable_tree_click)
+        self.tree.bind("<Key>", lambda e: "break")
 
         scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscroll=scrollbar.set)
@@ -200,6 +207,10 @@ class MB339NavApp:
 
         btn_exit = tk.Button(ctrl_frame, text="ESCI", command=self.quit_app, bg="#c72e2e", fg="white", font=("Segoe UI", 9, "bold"), width=8, relief="flat", pady=5)
         btn_exit.pack(side="right", padx=4)
+
+    def disable_tree_click(self, event):
+        """Impedisce che il clic del mouse sulle righe della tabella cambi la selezione."""
+        return "break"
 
     def toggle_howto(self):
         if self.howto_win is not None and tk.Toplevel.winfo_exists(self.howto_win):
@@ -247,8 +258,8 @@ class MB339NavApp:
                 "   • Al raggiungimento del waypoint (sotto 0.8 NM), l'app passerà\n"
                 "     in automatico al punto successivo fino a destinazione.\n\n"
                 "4. GESTIONE MANUALE DELLA ROTTA:\n"
-                "   • Usa i pulsanti '<< WP Prec.' e 'WP Succ. >>' per saltare o\n"
-                "     selezionare manualmente qualsiasi waypoint in tempo reale."
+                "   • Usa esclusivamente i pulsanti '<< WP Prec.' e 'WP Succ. >>'\n"
+                "     per cambiare il waypoint attivo in qualsiasi momento."
             )
 
             txt_box = tk.Text(
@@ -375,14 +386,7 @@ class MB339NavApp:
             dist_str = "--.-"
             if self.plane_lat is not None and self.plane_lon is not None:
                 d = self.calculate_distance_nm(self.plane_lat, self.plane_lon, wp["lat"], wp["lon"])
-                brg = self.calculate_bearing(self.plane_lat, self.plane_lon, wp["lat"], wp["lon"])
-                
-                # Calcola la differenza angolare rispetto alla prua dell'aereo
-                diff = (brg - self.plane_hdg + 360) % 360
-                direction_tag = "FROM" if 90 <= diff <= 270 else "TO"
-                
-                # TO / FROM posizionato a sinistra della distanza
-                dist_str = f"{direction_tag}  {d:.1f} NM"
+                dist_str = f"{d:.1f} NM"
 
             self.tree.insert("", "end", iid=str(i), values=(f"{prefix}{i+1}", wp["name"], f"{wp['lat']:.4f}", f"{wp['lon']:.4f}", dist_str))
         
@@ -462,13 +466,10 @@ class MB339NavApp:
                 try:
                     p_lat = self.aq.get("PLANE_LATITUDE")
                     p_lon = self.aq.get("PLANE_LONGITUDE")
-                    p_hdg = self.aq.get("PLANE_HEADING_DEGREES_TRUE")
 
                     if p_lat is not None and p_lon is not None and p_lat != 0.0:
                         self.plane_lat = p_lat
                         self.plane_lon = p_lon
-                        if p_hdg is not None:
-                            self.plane_hdg = p_hdg
                         
                         self.root.after(0, self.lbl_pos.config, {"text": f"POS: LAT {p_lat:.4f}  |  LON {p_lon:.4f}"})
 
