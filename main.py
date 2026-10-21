@@ -21,7 +21,7 @@ class MB339NavApp:
     def __init__(self, root):
         self.root = root
         self.root.title("MB-339 SimBrief GPS Nav System")
-        self.root.geometry("560x660")
+        self.root.geometry("560x690")
         self.root.configure(bg="#1e1e1e")
         self.root.resizable(False, False)
 
@@ -38,6 +38,7 @@ class MB339NavApp:
         self.current_wp_index = 0
         self.nav_active = False
         self.connected = False
+        self.howto_win = None  # Riferimento alla finestra di istruzioni
 
         # Oggetti SimConnect
         self.sm = None
@@ -87,7 +88,6 @@ class MB339NavApp:
         self.app_icon = icon
         self.root.iconphoto(True, self.app_icon)
 
-        # Se il file non esiste, prova a crearne uno locale per PyInstaller
         local_ico = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gps_icon.ico")
         if not os.path.exists(local_ico):
             try:
@@ -107,6 +107,7 @@ class MB339NavApp:
         style = ttk.Style()
         style.theme_use("clam")
 
+        # --- FRAME 1: Configurazione SimBrief & SimConnect ---
         top_frame = tk.Frame(self.root, bg="#252526", bd=1, relief="ridge", padx=10, pady=10)
         top_frame.pack(fill="x", padx=12, pady=10)
 
@@ -115,26 +116,31 @@ class MB339NavApp:
         self.entry_sb = tk.Entry(
             top_frame,
             textvariable=self.simbrief_user,
-            width=12,
+            width=10,
             font=("Consolas", 11),
             bg="#3c3c3c",
             fg="#ffffff",
             insertbackground="white"
         )
-        self.entry_sb.grid(row=0, column=1, padx=5, pady=5)
+        self.entry_sb.grid(row=0, column=1, padx=4, pady=5)
 
         self.entry_sb.bind("<KeyRelease>", self.on_id_activity)
         self.entry_sb.bind("<FocusIn>", self.on_id_activity)
 
-        btn_sb = tk.Button(top_frame, text="Scarica OFP", command=self.load_simbrief, bg="#007acc", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=8, pady=4)
-        btn_sb.grid(row=0, column=2, padx=8, pady=5)
+        btn_sb = tk.Button(top_frame, text="Scarica OFP", command=self.load_simbrief, bg="#007acc", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=6, pady=4)
+        btn_sb.grid(row=0, column=2, padx=4, pady=5)
 
-        self.btn_conn = tk.Button(top_frame, text="Connetti MSFS", command=self.connect_msfs, bg="#388a34", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=8, pady=4)
-        self.btn_conn.grid(row=0, column=3, padx=5, pady=5)
+        self.btn_conn = tk.Button(top_frame, text="Connetti MSFS", command=self.connect_msfs, bg="#388a34", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=6, pady=4)
+        self.btn_conn.grid(row=0, column=3, padx=4, pady=5)
+
+        # Pulsante HOW TO
+        self.btn_howto = tk.Button(top_frame, text="HOW TO", command=self.toggle_howto, bg="#646695", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=6, pady=4)
+        self.btn_howto.grid(row=0, column=4, padx=4, pady=5)
 
         self.lbl_status = tk.Label(top_frame, text="Stato: Disconnesso da MSFS", fg="#f48771", bg="#252526", font=("Segoe UI", 9, "italic"))
-        self.lbl_status.grid(row=1, column=0, columnspan=4, pady=(5, 0), sticky="w")
+        self.lbl_status.grid(row=1, column=0, columnspan=5, pady=(5, 0), sticky="w")
 
+        # --- FRAME 2: Display Dati Navigazione (Stile Avionica GPS) ---
         nav_frame = tk.Frame(self.root, bg="#141414", bd=2, relief="sunken", padx=15, pady=12)
         nav_frame.pack(fill="x", padx=12, pady=5)
 
@@ -154,6 +160,7 @@ class MB339NavApp:
         self.lbl_pos = tk.Label(nav_frame, text="POS: LAT --.----  |  LON --.----", fg="#569cd6", bg="#141414", font=("Consolas", 10))
         self.lbl_pos.grid(row=2, column=0, columnspan=3, pady=(8, 0), sticky="w")
 
+        # --- FRAME 3: Tabella Waypoint Rotta ---
         list_frame = tk.Frame(self.root, bg="#1e1e1e")
         list_frame.pack(fill="both", expand=True, padx=12, pady=8)
 
@@ -174,6 +181,7 @@ class MB339NavApp:
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
+        # --- FRAME 4: Controlli Autopilota, Sequenza e Uscita ---
         ctrl_frame = tk.Frame(self.root, bg="#252526", bd=1, relief="ridge", padx=10, pady=10)
         ctrl_frame.pack(fill="x", padx=12, pady=10)
 
@@ -188,6 +196,91 @@ class MB339NavApp:
 
         btn_exit = tk.Button(ctrl_frame, text="ESCI", command=self.quit_app, bg="#c72e2e", fg="white", font=("Segoe UI", 9, "bold"), width=8, relief="flat", pady=5)
         btn_exit.pack(side="right", padx=4)
+
+    def toggle_howto(self):
+        """Apre o chiude la finestra HOW TO a destra della finestra principale."""
+        if self.howto_win is not None and tk.Toplevel.winfo_exists(self.howto_win):
+            # Se la finestra è già aperta, la chiude
+            self.howto_win.destroy()
+            self.howto_win = None
+        else:
+            # Altrimenti la crea e la posiziona a destra
+            self.howto_win = tk.Toplevel(self.root)
+            self.howto_win.title("HOW TO - MB-339 Cockpit Setup")
+            
+            x = self.root.winfo_rootx()
+            y = self.root.winfo_rooty()
+            width = self.root.winfo_width()
+            
+            self.howto_win.geometry(f"520x460+{x + width + 10}+{y}")
+            self.howto_win.configure(bg="#252526")
+            self.howto_win.resizable(False, False)
+            
+            # Intercetta la chiusura con la "X" per azzerare il riferimento
+            self.howto_win.protocol("WM_DELETE_WINDOW", self.close_howto)
+
+            header_lbl = tk.Label(
+                self.howto_win, 
+                text="Istruzioni Operative per il Cockpit (MB-339)", 
+                fg="#4ec9b0", 
+                bg="#252526", 
+                font=("Segoe UI", 11, "bold")
+            )
+            header_lbl.pack(pady=(15, 10), padx=15, anchor="w")
+
+            instructions = (
+                "1. PREPARAZIONE AUTOPILOTA & FLIGHT DIRECTOR:\n"
+                "   • Individua il pannello del Flight Director / Autopilota sul glareshield centrale.\n"
+                "   • Assicurati che l'autopilota sia inserito (Master ON).\n"
+                "   • Premi il pulsante HDG (Heading) sul pannello per fare in modo che\n"
+                "     l'aeromobile segua la prua impostata dal bug di direzione.\n"
+                "   • Se desideri mantenere la quota di crociera, inserisci ALT HOLD\n"
+                "     una volta raggiunto il livello di volo desiderato.\n\n"
+                "2. SINCRONIZZAZIONE E AVVIO DELLA NAVIGAZIONE:\n"
+                "   • Inserisci il tuo SimBrief Pilot ID e clicca su 'Scarica OFP'.\n"
+                "   • Clicca su 'Connetti MSFS' per attivare il ponte SimConnect.\n"
+                "   • Quando sei pronto al decollo o in volo, clicca sul pulsante\n"
+                "     centrale 'AVVIA NAV (HDG)' nell'applicazione.\n"
+                "   • L'app aggiornerà automaticamente in tempo reale l'Heading Bug\n"
+                "     guidando l'MB-339 attraverso tutti i waypoint della rotta."
+            )
+
+            txt_box = tk.Text(
+                self.howto_win, 
+                wrap="word", 
+                bg="#1e1e1e", 
+                fg="#d4d4d4", 
+                font=("Consolas", 10), 
+                padx=12, 
+                pady=12, 
+                bd=0, 
+                highlightthickness=0
+            )
+            txt_box.insert("1.0", instructions)
+            txt_box.config(state="disabled")
+            txt_box.pack(fill="both", expand=True, padx=15, pady=5)
+
+            btn_close = tk.Button(
+                self.howto_win, 
+                text="CHIUDI", 
+                command=self.close_howto, 
+                bg="#007acc", 
+                fg="white", 
+                font=("Segoe UI", 9, "bold"), 
+                relief="flat", 
+                padx=15, 
+                pady=6
+            )
+            btn_close.pack(pady=15)
+
+    def close_howto(self):
+        """Chiude la finestra HOW TO e pulisce il riferimento."""
+        if self.howto_win is not None:
+            try:
+                self.howto_win.destroy()
+            except Exception:
+                pass
+            self.howto_win = None
 
     def on_id_activity(self, event=None):
         self.entry_sb.config(show="")
@@ -205,6 +298,7 @@ class MB339NavApp:
     def quit_app(self):
         self.nav_active = False
         self.running = False
+        self.close_howto()
         try:
             if self.sm:
                 self.sm.exit()

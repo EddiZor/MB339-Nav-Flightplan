@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['main.py'],
+    ['C:\\Users\\zorzi\\Desktop\\Github EddiZor\\flight-sim\\MB339-Nav-Flightplan\\main.py'],
     pathex=[],
     binaries=[('C:\\Users\\zorzi\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\SimConnect\\SimConnect.dll', 'SimConnect')],
     datas=[('C:\\Users\\zorzi\\Desktop\\Github EddiZor\\flight-sim\\MB339-Nav-Flightplan\\gps_icon.ico', '.'), ('C:\\Users\\zorzi\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\SimConnect\\SimConnect.dll', 'SimConnect')],
