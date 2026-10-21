@@ -21,7 +21,7 @@ class MB339NavApp:
     def __init__(self, root):
         self.root = root
         self.root.title("MB-339 SimBrief GPS Nav System")
-        self.root.geometry("560x690")
+        self.root.geometry("740x690")
         self.root.configure(bg="#1e1e1e")
         self.root.resizable(False, False)
 
@@ -38,7 +38,12 @@ class MB339NavApp:
         self.current_wp_index = 0
         self.nav_active = False
         self.connected = False
-        self.howto_win = None  # Riferimento alla finestra di istruzioni
+        self.howto_win = None
+        
+        # Coordinate e Heading attuali dell'aereo
+        self.plane_lat = None
+        self.plane_lon = None
+        self.plane_hdg = 0.0
 
         # Oggetti SimConnect
         self.sm = None
@@ -59,7 +64,6 @@ class MB339NavApp:
         self.worker_thread.start()
 
     def setup_gps_icon(self):
-        """Carica l'icona sia in modalità script che dentro l'eseguibile PyInstaller."""
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         ico_path = os.path.join(base_path, "gps_icon.ico")
 
@@ -69,7 +73,6 @@ class MB339NavApp:
             except Exception:
                 pass
 
-        # Disegna l'icona 32x32 in memoria con PhotoImage
         icon = tk.PhotoImage(width=32, height=32)
         cx, cy = 15.5, 15.5
         for y in range(32):
@@ -133,7 +136,6 @@ class MB339NavApp:
         self.btn_conn = tk.Button(top_frame, text="Connetti MSFS", command=self.connect_msfs, bg="#388a34", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=6, pady=4)
         self.btn_conn.grid(row=0, column=3, padx=4, pady=5)
 
-        # Pulsante HOW TO
         self.btn_howto = tk.Button(top_frame, text="HOW TO", command=self.toggle_howto, bg="#646695", fg="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=6, pady=4)
         self.btn_howto.grid(row=0, column=4, padx=4, pady=5)
 
@@ -160,21 +162,23 @@ class MB339NavApp:
         self.lbl_pos = tk.Label(nav_frame, text="POS: LAT --.----  |  LON --.----", fg="#569cd6", bg="#141414", font=("Consolas", 10))
         self.lbl_pos.grid(row=2, column=0, columnspan=3, pady=(8, 0), sticky="w")
 
-        # --- FRAME 3: Tabella Waypoint Rotta ---
+        # --- FRAME 3: Tabella Waypoint Rotta con TO/FROM a sinistra ---
         list_frame = tk.Frame(self.root, bg="#1e1e1e")
         list_frame.pack(fill="both", expand=True, padx=12, pady=8)
 
-        columns = ("idx", "ident", "lat", "lon")
+        columns = ("idx", "ident", "lat", "lon", "dist")
         self.tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=11)
         self.tree.heading("idx", text="#")
         self.tree.heading("ident", text="Waypoint")
         self.tree.heading("lat", text="Latitudine")
         self.tree.heading("lon", text="Longitudine")
+        self.tree.heading("dist", text="Direzione & Distanza")
 
-        self.tree.column("idx", width=45, anchor="center")
-        self.tree.column("ident", width=130, anchor="center")
-        self.tree.column("lat", width=150, anchor="center")
-        self.tree.column("lon", width=150, anchor="center")
+        self.tree.column("idx", width=40, anchor="center")
+        self.tree.column("ident", width=110, anchor="center")
+        self.tree.column("lat", width=130, anchor="center")
+        self.tree.column("lon", width=130, anchor="center")
+        self.tree.column("dist", width=180, anchor="center")
 
         scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscroll=scrollbar.set)
@@ -198,7 +202,6 @@ class MB339NavApp:
         btn_exit.pack(side="right", padx=4)
 
     def toggle_howto(self):
-        """Apre o chiude la finestra HOWTO (più larga, adatta a evitare lo scroll)."""
         if self.howto_win is not None and tk.Toplevel.winfo_exists(self.howto_win):
             self.howto_win.destroy()
             self.howto_win = None
@@ -208,17 +211,15 @@ class MB339NavApp:
             
             x = self.root.winfo_rootx()
             y = self.root.winfo_rooty()
+            width = self.root.winfo_width()
             height = self.root.winfo_height()
             
-            # Larghezza aumentata a 680 pixel per evitare lo scroll del testo
-            howto_width = 680
-            self.howto_win.geometry(f"{howto_width}x{height}+{x + 560 + 10}+{y}")
+            self.howto_win.geometry(f"680x{height}+{x + width + 10}+{y}")
             self.howto_win.configure(bg="#1e1e1e")
             self.howto_win.resizable(False, False)
             
             self.howto_win.protocol("WM_DELETE_WINDOW", self.close_howto)
 
-            # Titolo
             header_lbl = tk.Label(
                 self.howto_win, 
                 text="GUIDA OPERATIVA & COCKPIT SETUP", 
@@ -228,7 +229,6 @@ class MB339NavApp:
             )
             header_lbl.pack(pady=(20, 10), padx=20, anchor="w")
 
-            # Testo dettagliato
             instructions = (
                 "1. COLLEGAMENTO E SIMBRIEF:\n"
                 "   • Inserisci il tuo SimBrief Pilot ID nella schermata principale.\n"
@@ -281,7 +281,6 @@ class MB339NavApp:
             btn_close.pack(pady=20)
 
     def close_howto(self):
-        """Chiude la finestra HOW TO e pulisce il riferimento."""
         if self.howto_win is not None:
             try:
                 self.howto_win.destroy()
@@ -362,7 +361,6 @@ class MB339NavApp:
                 self.waypoints = wps
                 self.current_wp_index = 1 if len(wps) > 1 else 0
                 self.refresh_tree()
-                messagebox.showinfo("SimBrief OFP", f"Piano di volo caricato correttamente!\n{len(wps)} waypoint estratti.")
             else:
                 messagebox.showerror("Errore SimBrief", f"Errore HTTP: {response.status_code}")
         except Exception as e:
@@ -373,7 +371,21 @@ class MB339NavApp:
             self.tree.delete(row)
         for i, wp in enumerate(self.waypoints):
             prefix = "▶ " if i == self.current_wp_index else ""
-            self.tree.insert("", "end", iid=str(i), values=(f"{prefix}{i+1}", wp["name"], f"{wp['lat']:.4f}", f"{wp['lon']:.4f}"))
+            
+            dist_str = "--.-"
+            if self.plane_lat is not None and self.plane_lon is not None:
+                d = self.calculate_distance_nm(self.plane_lat, self.plane_lon, wp["lat"], wp["lon"])
+                brg = self.calculate_bearing(self.plane_lat, self.plane_lon, wp["lat"], wp["lon"])
+                
+                # Calcola la differenza angolare rispetto alla prua dell'aereo
+                diff = (brg - self.plane_hdg + 360) % 360
+                direction_tag = "FROM" if 90 <= diff <= 270 else "TO"
+                
+                # TO / FROM posizionato a sinistra della distanza
+                dist_str = f"{direction_tag}  {d:.1f} NM"
+
+            self.tree.insert("", "end", iid=str(i), values=(f"{prefix}{i+1}", wp["name"], f"{wp['lat']:.4f}", f"{wp['lon']:.4f}", dist_str))
+        
         if self.waypoints and self.current_wp_index < len(self.waypoints):
             self.tree.selection_set(str(self.current_wp_index))
             self.tree.see(str(self.current_wp_index))
@@ -444,13 +456,20 @@ class MB339NavApp:
         return R_nm * c
 
     def sim_loop(self):
+        update_counter = 0
         while self.running:
             if self.connected and self.aq:
                 try:
                     p_lat = self.aq.get("PLANE_LATITUDE")
                     p_lon = self.aq.get("PLANE_LONGITUDE")
+                    p_hdg = self.aq.get("PLANE_HEADING_DEGREES_TRUE")
 
                     if p_lat is not None and p_lon is not None and p_lat != 0.0:
+                        self.plane_lat = p_lat
+                        self.plane_lon = p_lon
+                        if p_hdg is not None:
+                            self.plane_hdg = p_hdg
+                        
                         self.root.after(0, self.lbl_pos.config, {"text": f"POS: LAT {p_lat:.4f}  |  LON {p_lon:.4f}"})
 
                         if self.waypoints and self.current_wp_index < len(self.waypoints):
@@ -459,6 +478,11 @@ class MB339NavApp:
                             dist_nm = self.calculate_distance_nm(p_lat, p_lon, target["lat"], target["lon"])
 
                             self.root.after(0, self.update_telemetry_ui, target["name"], brg, dist_nm)
+
+                            update_counter += 1
+                            if update_counter >= 3:
+                                update_counter = 0
+                                self.root.after(0, self.refresh_tree)
 
                             if self.nav_active:
                                 if self.ev_hdg_set:
