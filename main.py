@@ -1,74 +1,82 @@
 import time
 import math
 import requests
+import xml.etree.ElementTree as ET
 from SimConnect import *
 
-# Inserisci il tuo SimBrief Pilot ID corretto
-SIMBRIEF_USER = "312044"
+# Inserisci il tuo SimBrief Pilot ID
+SIMBRIEF_USER = "312844"
 
-def fetch_simbrief_flightplan(user):
-    """Scarica l'ultimo piano di volo in formato JSON dall'API di SimBrief."""
-    url = f"https://www.simbrief.com/api/xml.fetcher.php?userid={user}&json=v2"
-    print(f"Connessione a SimBrief per il recupero del piano di volo (ID: {user})...")
+def fetch_simbrief_flightplan_xml(user):
+    """Scarica e analizza l'ultimo piano di volo direttamente dall'API XML di SimBrief."""
+    url = f"https://www.simbrief.com/api/xml.fetcher.php?userid={user}"
+    print(f"Connessione a SimBrief per il recupero dell'OFP (ID: {user})...")
     
     try:
         response = requests.get(url, timeout=10)
         print(f"Status Code ricevuto: {response.status_code}")
         
         if response.status_code == 200:
-            try:
-                data = response.json()
-            except Exception as json_err:
-                print(f"Errore nel parsing del JSON: {json_err}")
-                print(f"Risposta ricevuta dal server: {response.text[:200]}...")
-                return []
+            # Parsing dell'XML ricevuto da SimBrief
+            root = ET.fromstring(response.content)
             
             waypoints = []
-            orig = data.get("origin", {})
-            dest = data.get("destination", {})
             
-            # Aggiungi aeroporto di partenza come primo punto
-            if orig and orig.get("lat"):
-                waypoints.append({
-                    "name": orig.get("icao_code", "ORIG"),
-                    "lat": float(orig.get("lat", 0)),
-                    "lon": float(orig.get("lon", 0))
-                })
+            # Estrai aeroporto di partenza
+            orig_elem = root.find(".//origin")
+            if orig_elem is not None:
+                icao = orig_elem.find("icao_code")
+                lat = orig_elem.find("lat")
+                lon = orig_elem.find("lon")
+                if icao is not None and lat is not None and lon is not None:
+                    waypoints.append({
+                        "name": icao.text,
+                        "lat": float(lat.text),
+                        "lon": float(lon.text)
+                    })
             
-            # Estrai i waypoint enroute
-            navlog = data.get("navlog", [])
-            for fix in navlog:
-                try:
-                    lat = float(fix.get("lat", 0))
-                    lon = float(fix.get("lon", 0))
-                    ident = fix.get("ident", "WP")
-                    if lat != 0.0 and lon != 0.0:
-                        waypoints.append({
-                            "name": ident,
-                            "lat": lat,
-                            "lon": lon
-                        })
-                except (ValueError, TypeError):
-                    continue
-            
-            # Aggiungi aeroporto di arrivo
-            if dest and dest.get("lat") and (not waypoints or waypoints[-1]["name"] != dest.get("icao_code")):
-                waypoints.append({
-                    "name": dest.get("icao_code", "DEST"),
-                    "lat": float(dest.get("lat", 0)),
-                    "lon": float(dest.get("lon", 0))
-                })
+            # Estrai tutti i waypoint di rotta dal navlog
+            for fix in root.findall(".//navlog/fix"):
+                ident = fix.find("ident")
+                lat = fix.find("lat")
+                lon = fix.find("lon")
                 
-            gen_time = data.get("params", {}).get("time_generated", "N/A")
-            print(f"Piano di volo scaricato con successo! (Generato il: {gen_time})")
-            print(f"Rotta: {orig.get('icao_code')} -> {dest.get('icao_code')} ({len(waypoints)} punti totali)")
+                if ident is not None and lat is not None and lon is not None:
+                    try:
+                        lat_val = float(lat.text)
+                        lon_val = float(lon.text)
+                        if lat_val != 0.0 and lon_val != 0.0:
+                            # Evitiamo doppioni consecutivi identici
+                            if not waypoints or waypoints[-1]["name"] != ident.text:
+                                waypoints.append({
+                                    "name": ident.text,
+                                    "lat": lat_val,
+                                    "lon": lon_val
+                                })
+                    except (ValueError, TypeError):
+                        continue
             
+            # Estrai aeroporto di arrivo (se non già presente alla fine)
+            dest_elem = root.find(".//destination")
+            if dest_elem is not None:
+                icao = dest_elem.find("icao_code")
+                lat = dest_elem.find("lat")
+                lon = dest_elem.find("lon")
+                if icao is not None and lat is not None and lon is not None:
+                    if not waypoints or waypoints[-1]["name"] != icao.text:
+                        waypoints.append({
+                            "name": icao.text,
+                            "lat": float(lat.text),
+                            "lon": float(lon.text)
+                        })
+            
+            print(f"Piano di volo scaricato con successo da SimBrief! ({len(waypoints)} punti totali trovati)")
             return waypoints
         else:
-            print(f"Errore HTTP da SimBrief: {response.status_code}. Assicurati che l'ID sia corretto e che sia stato generato un piano di volo.")
+            print(f"Errore HTTP da SimBrief: {response.status_code}")
             return []
     except Exception as e:
-        print(f"Errore di connessione a SimBrief: {e}")
+        print(f"Errore di connessione o parsing XML con SimBrief: {e}")
         return []
 
 def calculate_bearing(lat1, lon1, lat2, lon2):
@@ -80,21 +88,25 @@ def calculate_bearing(lat1, lon1, lat2, lon2):
     bearing = math.degrees(math.atan2(x, y))
     return (bearing + 360) % 360
 
-# 1. Recupero dati da SimBrief
-waypoints = fetch_simbrief_flightplan(SIMBRIEF_USER)
+# 1. Recupero dati in remoto da SimBrief
+waypoints = fetch_simbrief_flightplan_xml(SIMBRIEF_USER)
 
 if not waypoints:
-    print("Impossibile procedere senza un piano di volo valido da SimBrief.")
+    print("Impossibile procedere: nessun waypoint recuperato da SimBrief. Assicurati di aver generato un volo sul sito.")
     exit()
 
-# 2. Inizializzazione SimConnect
-print("Connessione a Microsoft Flight Simulator in corso...")
+print("Waypoint della rotta:")
+for wp in waypoints:
+    print(f" - {wp['name']} ({wp['lat']}, {wp['lon']})")
+
+# 2. Inizializzazione SimConnect per MSFS
+print("\nConnessione a Microsoft Flight Simulator in corso...")
 sm = SimConnect()
 aq = AircraftRequests(sm, _time=1000)
 ae = AircraftEvents(sm)
 
 current_wp_index = 0
-print(f"Inizio navigazione per {len(waypoints)} waypoint...")
+print(f"Inizio navigazione automatica per {len(waypoints)} waypoint...")
 
 # Riferimenti Autopilota
 ap_master = ae.find("AUTOPILOT_MASTER")
