@@ -4,7 +4,7 @@ import requests
 from SimConnect import *
 
 # Inserisci il tuo SimBrief Pilot ID o Username
-SIMBRIEF_USER = "312044"  # Puoi usare anche il tuo username es. "Eddi" se preferisci
+SIMBRIEF_USER = "312844"  # Puoi usare anche il tuo username es. "Eddi" se preferisci
 
 def fetch_simbrief_flightplan(user):
     """Scarica l'ultimo piano di volo in formato JSON dall'API di SimBrief."""
