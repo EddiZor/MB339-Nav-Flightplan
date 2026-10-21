@@ -17,17 +17,15 @@ def fetch_simbrief_flightplan_xml(user):
         print(f"Status Code ricevuto: {response.status_code}")
         
         if response.status_code == 200:
-            # Parsing dell'XML ricevuto da SimBrief
             root = ET.fromstring(response.content)
-            
             waypoints = []
             
-            # Estrai aeroporto di partenza
+            # 1. Estrai aeroporto di partenza
             orig_elem = root.find(".//origin")
             if orig_elem is not None:
                 icao = orig_elem.find("icao_code")
-                lat = orig_elem.find("lat")
-                lon = orig_elem.find("lon")
+                lat = orig_elem.find("pos_lat") if orig_elem.find("pos_lat") is not None else orig_elem.find("lat")
+                lon = orig_elem.find("pos_long") if orig_elem.find("pos_long") is not None else orig_elem.find("lon")
                 if icao is not None and lat is not None and lon is not None:
                     waypoints.append({
                         "name": icao.text,
@@ -35,11 +33,11 @@ def fetch_simbrief_flightplan_xml(user):
                         "lon": float(lon.text)
                     })
             
-            # Estrai tutti i waypoint di rotta dal navlog
+            # 2. Estrai i waypoint di rotta dal navlog (usando pos_lat e pos_long)
             for fix in root.findall(".//navlog/fix"):
                 ident = fix.find("ident")
-                lat = fix.find("lat")
-                lon = fix.find("lon")
+                lat = fix.find("pos_lat")
+                lon = fix.find("pos_long")
                 
                 if ident is not None and lat is not None and lon is not None:
                     try:
@@ -56,12 +54,12 @@ def fetch_simbrief_flightplan_xml(user):
                     except (ValueError, TypeError):
                         continue
             
-            # Estrai aeroporto di arrivo (se non già presente alla fine)
+            # 3. Estrai aeroporto di arrivo
             dest_elem = root.find(".//destination")
             if dest_elem is not None:
                 icao = dest_elem.find("icao_code")
-                lat = dest_elem.find("lat")
-                lon = dest_elem.find("lon")
+                lat = dest_elem.find("pos_lat") if dest_elem.find("pos_lat") is not None else dest_elem.find("lat")
+                lon = dest_elem.find("pos_long") if dest_elem.find("pos_long") is not None else dest_elem.find("lon")
                 if icao is not None and lat is not None and lon is not None:
                     if not waypoints or waypoints[-1]["name"] != icao.text:
                         waypoints.append({
@@ -92,7 +90,7 @@ def calculate_bearing(lat1, lon1, lat2, lon2):
 waypoints = fetch_simbrief_flightplan_xml(SIMBRIEF_USER)
 
 if not waypoints:
-    print("Impossibile procedere: nessun waypoint recuperato da SimBrief. Assicurati di aver generato un volo sul sito.")
+    print("Impossibile procedere: nessun waypoint recuperato da SimBrief.")
     exit()
 
 print("Waypoint della rotta:")
@@ -108,16 +106,16 @@ ae = AircraftEvents(sm)
 current_wp_index = 0
 print(f"Inizio navigazione automatica per {len(waypoints)} waypoint...")
 
-# Riferimenti Autopilota
-ap_master = ae.find("AUTOPILOT_MASTER")
-hdg_hold = ae.find("AP_HDG_HOLD")
-hdg_select = ae.find("HEADING_BUG_SET")
+# Gestione sicura dell'autopilota
+try:
+    ap_on = ae.find("AUTOPILOT_ON")
+    if ap_on:
+        ap_on.set(1)
+    print("Comando Autopilota ON inviato.")
+except Exception as e:
+    print(f"Nota autopilota: {e}")
 
-# Attiva l'autopilota e la modalità Heading
-ap_master.set(1)
-hdg_hold.set(1)
-
-print("Autopilota inserito. Sistema di navigazione attivo. Premi Ctrl+C per uscire.")
+print("Sistema di navigazione attivo. Premi Ctrl+C per uscire.")
 
 try:
     while True:
@@ -137,19 +135,28 @@ try:
             # Calcola il bearing verso il waypoint corrente
             bearing = calculate_bearing(plane_lat, plane_lon, target_lat, target_lon)
             
-            # Imposta l'Heading bug dell'autopilota
-            hdg_select.set(int(bearing))
+            # Imposta l'Heading bug dell'autopilota in MSFS
+            try:
+                hdg_event = ae.find("HEADING_BUG_SET")
+                if hdg_event:
+                    hdg_event.set(int(bearing))
+            except Exception:
+                pass
             
-            # Calcola distanza approssimativa in gradi (~0.01 = 1 km)
+            # Calcola distanza approssimativa in gradi (~0.01 = ~1.1 km)
             dist = math.sqrt((plane_lat - target_lat)**2 + (plane_lon - target_lon)**2)
             
             print(f"Verso: {target_name} ({current_wp_index+1}/{len(waypoints)}) | "
                   f"Pos: {plane_lat:.4f}, {plane_lon:.4f} | Heading da tenere: {bearing:.1f}°")
 
             # Soglia di passaggio al waypoint successivo (~1.5 km)
-            if dist < 0.015:
+            if dist < 0.015 and current_wp_index > 0:
                 print(f"--> Waypoint {target_name} raggiunto! Passaggio al successivo.")
                 current_wp_index += 1
+            elif dist < 0.015 and current_wp_index == 0:
+                # Se siamo sul punto di partenza e ci stiamo muovendo, passiamo al primo fix dopo il distacco
+                if len(waypoints) > 1:
+                    current_wp_index += 1
 
         time.sleep(1)
 
