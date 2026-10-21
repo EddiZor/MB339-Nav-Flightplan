@@ -3,49 +3,56 @@ import math
 import requests
 from SimConnect import *
 
-# Inserisci il tuo SimBrief Pilot ID o Username
-SIMBRIEF_USER = "312844"  # Puoi usare anche il tuo username es. "Eddi" se preferisci
+# Inserisci il tuo SimBrief Pilot ID corretto
+SIMBRIEF_USER = "312044"
 
 def fetch_simbrief_flightplan(user):
     """Scarica l'ultimo piano di volo in formato JSON dall'API di SimBrief."""
-    url = f"https://www.simbrief.com/api/xml.fetch.php?userid={user}&json=1"
+    url = f"https://www.simbrief.com/api/xml.fetcher.php?userid={user}&json=v2"
     print(f"Connessione a SimBrief per il recupero del piano di volo (ID: {user})...")
     
     try:
         response = requests.get(url, timeout=10)
+        print(f"Status Code ricevuto: {response.status_code}")
+        
         if response.status_code == 200:
-            data = response.json()
+            try:
+                data = response.json()
+            except Exception as json_err:
+                print(f"Errore nel parsing del JSON: {json_err}")
+                print(f"Risposta ricevuta dal server: {response.text[:200]}...")
+                return []
             
             waypoints = []
             orig = data.get("origin", {})
             dest = data.get("destination", {})
             
             # Aggiungi aeroporto di partenza come primo punto
-            if orig:
+            if orig and orig.get("lat"):
                 waypoints.append({
                     "name": orig.get("icao_code", "ORIG"),
                     "lat": float(orig.get("lat", 0)),
                     "lon": float(orig.get("lon", 0))
                 })
             
-            # Estrai i waypoint enroute dal piano di volo SimBrief
+            # Estrai i waypoint enroute
             navlog = data.get("navlog", [])
             for fix in navlog:
-                # Prendiamo i punti significativi (fix, VOR, NDB, wpt)
-                lat = float(fix.get("lat", 0))
-                lon = float(fix.get("lon", 0))
-                ident = fix.get("ident", "WP")
-                
-                # Evitiamo duplicati consecutivi o coordinate nulle
-                if lat != 0.0 and lon != 0.0:
-                    waypoints.append({
-                        "name": ident,
-                        "lat": lat,
-                        "lon": lon
-                    })
+                try:
+                    lat = float(fix.get("lat", 0))
+                    lon = float(fix.get("lon", 0))
+                    ident = fix.get("ident", "WP")
+                    if lat != 0.0 and lon != 0.0:
+                        waypoints.append({
+                            "name": ident,
+                            "lat": lat,
+                            "lon": lon
+                        })
+                except (ValueError, TypeError):
+                    continue
             
-            # Aggiungi aeroporto di arrivo come ultimo punto se non già incluso
-            if dest and (not waypoints or waypoints[-1]["name"] != dest.get("icao_code")):
+            # Aggiungi aeroporto di arrivo
+            if dest and dest.get("lat") and (not waypoints or waypoints[-1]["name"] != dest.get("icao_code")):
                 waypoints.append({
                     "name": dest.get("icao_code", "DEST"),
                     "lat": float(dest.get("lat", 0)),
@@ -54,11 +61,11 @@ def fetch_simbrief_flightplan(user):
                 
             gen_time = data.get("params", {}).get("time_generated", "N/A")
             print(f"Piano di volo scaricato con successo! (Generato il: {gen_time})")
-            print(Route := f"Rotta: {orig.get('icao_code')} -> {dest.get('icao_code')} ({len(waypoints)} punti totali)")
+            print(f"Rotta: {orig.get('icao_code')} -> {dest.get('icao_code')} ({len(waypoints)} punti totali)")
             
             return waypoints
         else:
-            print(f"Errore HTTP da SimBrief: {response.status_code}")
+            print(f"Errore HTTP da SimBrief: {response.status_code}. Assicurati che l'ID sia corretto e che sia stato generato un piano di volo.")
             return []
     except Exception as e:
         print(f"Errore di connessione a SimBrief: {e}")
