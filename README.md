@@ -1,22 +1,22 @@
 # MB339-Nav-Flightplan
 
-An open-source Python utility designed for Microsoft Flight Simulator to read flight plans directly from SimBrief and automatically navigate the IndiaFoxtEcho Aermacchi MB-339 via SimConnect by controlling the autopilot heading in real-time.
+**MB339-Nav-Flightplan** è un'utility open-source sviluppata in Python e dotata di interfaccia grafica (GUI), progettata specificamente per **Microsoft Flight Simulator**. L'applicazione si collega in tempo reale al tuo account **SimBrief** per scaricare e analizzare l'ultimo piano di volo (OFP), interfacciandosi con il simulatore tramite **SimConnect** per guidare automaticamente l'Aermacchi MB-339 di IndiaFoxtEcho lungo la rotta impostando l'Heading bug dell'autopilota.
 
-## Features
-* **SimBrief Integration:** Automatically fetches and parses the latest operational flight plan (OFP) using your SimBrief Pilot ID.
-* **SimConnect Bridge:** Interacts directly with MSFS in real-time to monitor aircraft position and manage autopilot states.
-* **Heading Hold Navigation:** Automatically calculates the bearing to active waypoints and steers the aircraft sequentially along the route.
+---
 
-## Prerequisites
-* Microsoft Flight Simulator (MSFS)
-* IndiaFoxtEcho MB-339
-* Python 3.9+
+## Caratteristiche Principali
+* **Integrazione Remota con SimBrief:** Recupera automaticamente tutti i waypoint, l'aeroporto di partenza e di arrivo dall'API XML di SimBrief inserendo semplicemente il tuo Pilot ID (con mascheramento automatico di sicurezza dopo 3 secondi).
+* **Display Telemetria in Stile Avionica:** Mostra in tempo reale il waypoint attivo, la prua magnetica/geografica da tenere (`BRG`) e la distanza esatta in Miglia Nautiche (`NM`) calcolata tramite la formula di Haversine.
+* **Ponte nativo con MSFS (SimConnect):** Monitora le coordinate GPS dell'aereo e invia i comandi di correzione dell'Heading all'autopilota in modo fluido.
+* **Gestione Flessibile della Rotta:** Consente di avanzare o retrocedere manualmente tra i waypoint (`<< WP Prec.` / `WP Succ. >>`) o attivare/disattivare la navigazione automatica con un clic.
+* **Guida Rapida Integrata (HOW TO):** Finestra informativa a scomparsa affiancata alla schermata principale con tutte le istruzioni operative per il cockpit.
 
-## Installation & Setup
+---
 
-1. Clone or download this repository into your local workspace.
-2. Install the required Python dependencies:
-   ```bash
-   pip install -r requirements.txt
+## Requisiti di Sistema
+* Microsoft Flight Simulator (MSFS 2020 / MSFS 2024)
+* Aermacchi MB-339 (IndiaFoxtEcho)
+* Python 3.9+ (se esegui lo script da codice sorgente)
 
-   Open main.py and ensure your SimBrief Pilot ID is correctly configured.
+---
+
