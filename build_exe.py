@@ -1,62 +1,69 @@
 import os
 import sys
-import shutil
 import subprocess
+import shutil
+import zipfile
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
-ico_path = os.path.join(base_dir, "gps_icon.ico")
-main_path = os.path.join(base_dir, "main.py")
-dist_dir = os.path.join(base_dir, "dist")
-build_dir = os.path.join(base_dir, "build")
-spec_file = os.path.join(base_dir, "MB339-Nav-Flightplan.spec")
+def build():
+    print("=== Avvio compilazione e pacchettizzazione per Flightsim.to ===")
+    
+    # 1. Pulisci le build precedenti
+    for d in ["build", "dist"]:
+        if os.path.exists(d):
+            shutil.rmtree(d)
+            print(f"Rimossa cartella temporanea: {d}")
 
-# 1. Chiude forzatamente eventuali istanze di MB339-Nav-Flightplan.exe rimaste aperte
-print("Chiusura eventuali istanze aperte dell'applicazione...")
-subprocess.run(["taskkill", "/F", "/IM", "MB339-Nav-Flightplan.exe"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # 2. Trova la SimConnect.dll nel pacchetto installato di Python
+    simconnect_dll_path = None
+    try:
+        import SimConnect
+        sc_dir = os.path.dirname(SimConnect.__file__)
+        dll_candidate = os.path.join(sc_dir, "SimConnect.dll")
+        if os.path.exists(dll_candidate):
+            simconnect_dll_path = dll_candidate
+    except Exception:
+        pass
 
-# 2. Elimina le vecchie cartelle build/ e dist/ per evitare file in cache
-for folder in [dist_dir, build_dir]:
-    if os.path.exists(folder):
-        shutil.rmtree(folder, ignore_errors=True)
-if os.path.exists(spec_file):
-    os.remove(spec_file)
+    # 3. Comando PyInstaller ottimizzato
+    cmd = [
+        sys.executable, "-m", "PyInstaller",
+        "--noconsole",
+        "--onefile",
+        "--name=MB339-Nav-Flightplan",
+        "--icon=gps_icon.ico",
+        "--clean"
+    ]
 
-# 3. Rigenera l'icona GPS (se non presente o per sicurezza)
-from PIL import Image, ImageDraw
-import SimConnect
+    if simconnect_dll_path:
+        cmd.append(f"--add-binary={simconnect_dll_path};SimConnect")
+        print(f"Inclusa SimConnect.dll da: {simconnect_dll_path}")
 
-img = Image.new("RGBA", (256, 256), (0, 0, 0, 0))
-draw = ImageDraw.Draw(img)
-draw.ellipse((16, 16, 240, 240), fill=(20, 20, 20, 255), outline=(0, 255, 102, 255), width=12)
-draw.ellipse((68, 68, 188, 188), outline=(0, 140, 60, 255), width=4)
-draw.line((128, 28, 128, 228), fill=(0, 180, 80, 255), width=6)
-draw.line((28, 128, 228, 128), fill=(0, 180, 80, 255), width=6)
-draw.polygon([(128, 44), (92, 164), (128, 140), (164, 164)], fill=(0, 255, 102, 255))
-draw.ellipse((114, 114, 142, 142), fill=(255, 60, 60, 255))
-img.save(ico_path, format="ICO", sizes=[(256, 256), (128, 128), (64, 64), (32, 32), (16, 16)])
+    cmd.append("main.py")
 
-# 4. Trova SimConnect.dll
-sc_dir = os.path.dirname(SimConnect.__file__)
-dll_path = os.path.join(sc_dir, "SimConnect.dll")
+    print("Esecuzione PyInstaller in corso...")
+    subprocess.check_call(cmd)
 
-# 5. Compila da zero con PyInstaller
-cmd = [
-    sys.executable, "-m", "PyInstaller",
-    "--noconsole",
-    "--onefile",
-    f"--icon={ico_path}",
-    f"--add-data={ico_path}{os.pathsep}.",
-    "--name=MB339-Nav-Flightplan",
-    "--clean",
-    "--noconfirm"
-]
+    # 4. Creazione archivio ZIP per Flightsim.to
+    dist_dir = "dist"
+    zip_name = "MB339-Nav-Flightplan-v1.0.zip"
+    zip_path = os.path.join(dist_dir, zip_name)
 
-if os.path.exists(dll_path):
-    cmd.append(f"--add-binary={dll_path}{os.pathsep}SimConnect")
-    cmd.append(f"--add-data={dll_path}{os.pathsep}SimConnect")
+    print(f"Creazione archivio di rilascio: {zip_path}")
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        # Aggiunge l'eseguibile
+        exe_file = "MB339-Nav-Flightplan.exe"
+        exe_full_path = os.path.join(dist_dir, exe_file)
+        if os.path.exists(exe_full_path):
+            zipf.write(exe_full_path, arcname=exe_file)
+            print(f"  + Aggiunto: {exe_file}")
 
-cmd.append(main_path)
+        # Aggiunge il README.md se presente
+        if os.path.exists("README.md"):
+            zipf.write("README.md", arcname="README.md")
+            print("  + Aggiunto: README.md")
 
-print("Compilazione pulita in corso...")
-subprocess.check_call(cmd)
-print("\nCOMPILAZIONE COMPLETATA! Nuovo file creato in:", os.path.join(dist_dir, "MB339-Nav-Flightplan.exe"))
+    print("\n=== Operazione completata con successo! ===")
+    print(f"Archivio ZIP pronto per Flightsim.to: {zip_path}")
+
+if __name__ == "__main__":
+    build()
