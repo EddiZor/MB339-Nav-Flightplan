@@ -18,21 +18,163 @@ except Exception:
     pass
 
 
+TRANSLATIONS = {
+    "IT": {
+        "lang_btn": " EN",
+        "fetch_ofp": "Scarica OFP",
+        "load_pln": "Carica .PLN",
+        "connect_msfs": "Connetti MSFS",
+        "reconnect_msfs": "Riconnetti MSFS",
+        "status_disc": "● Stato: Disconnesso da MSFS",
+        "status_conn": "● Stato: Connesso a MSFS (SimConnect Attivo)",
+        "status_err": "● Stato: Errore connessione MSFS",
+        "col_wp": "Waypoint",
+        "col_lat": "Latitudine",
+        "col_lon": "Longitudine",
+        "col_dist": "Distanza (NM)",
+        "col_dep": "DEP",
+        "col_dest": "DEST",
+        "prev_wp": "<< WP Prec.",
+        "next_wp": "WP Succ. >>",
+        "start_nav": "AVVIA NAV (HDG)",
+        "stop_nav": "NAV ATTIVA (STOP)",
+        "route_done": "ROTTA COMPLETATA",
+        "exit": "ESCI",
+        "howto_title": "HOW TO - MB-339 Cockpit Setup & Guida",
+        "howto_header": "GUIDA OPERATIVA & COCKPIT SETUP",
+        "howto_close": "CHIUDI GUIDA",
+        "howto_text": (
+            "1. CARICAMENTO ROTTA (SIMBRIEF O FILE .PLN):\n"
+            "   • Da SimBrief: inserisci il tuo Pilot ID e clicca su 'Scarica OFP'.\n"
+            "   • Da File Locale: clicca su 'Carica .PLN' e seleziona un file .pln\n"
+            "     generato da MSFS 2024 / 2020, Little Navmap o SimBrief.\n"
+            "   • Clicca su 'Connetti MSFS' per attivare il ponte SimConnect.\n\n"
+            "2. SETUP NEL COCKPIT DELL'MB-339:\n"
+            "   • Accendi l'impianto elettrico e l'avionica del velivolo.\n"
+            "   • Individua il pannello del Flight Director / Autopilota sul glareshield.\n"
+            "   • Assicurati che l'autopilota sia inserito (Master ON).\n"
+            "   • Premi il pulsante HDG (Heading) per abilitare il controllo di prua.\n"
+            "   • Se desideri mantenere la quota, inserisci ALT HOLD a quota di crociera.\n\n"
+            "3. NAVIGAZIONE AUTOMATICA:\n"
+            "   • Clicca su 'AVVIA NAV (HDG)' nell'applicazione.\n"
+            "   • L'utility calcolerà in tempo reale il rilevamento (Bearing) e\n"
+            "     aggiornerà automaticamente l'Heading Bug sul tuo HSI.\n"
+            "   • Al raggiungimento del waypoint (sotto 0.8 NM), l'app passerà\n"
+            "     in automatico al punto successivo fino a destinazione.\n\n"
+            "4. GESTIONE MANUALE DELLA ROTTA:\n"
+            "   • Usa esclusivamente i pulsanti '<< WP Prec.' e 'WP Succ. >>'\n"
+            "     per cambiare il waypoint attivo in qualsiasi momento."
+        ),
+        "dlg_open_pln": "Seleziona Piano di Volo MSFS (.pln)",
+        "dlg_all_files": "Tutti i file",
+        "warn_title": "Attenzione",
+        "warn_sb_id": "Inserisci il tuo SimBrief Pilot ID.",
+        "warn_not_conn_title": "Non Connesso",
+        "warn_not_conn_msg": "Connettiti prima a MSFS!",
+        "warn_no_route_title": "Nessuna Rotta",
+        "warn_no_route_msg": "Scarica prima il piano da SimBrief o carica un file .PLN!",
+        "warn_pln_coords_title": "Coordinate Mancanti nel file .PLN",
+        "warn_pln_coords_msg": (
+            "Questo file .pln (formato MSFS 2024) contiene solo i nomi dei waypoint senza coordinate geografiche.\n\n"
+            "Assicurati che il tuo SimBrief ID sia inserito correttamente o esporta il file in formato 'FS2020 (.pln)' da SimBrief / Little Navmap."
+        ),
+        "err_pln_title": "Errore Caricamento PLN",
+        "err_pln_msg": "Impossibile leggere il file .pln:\n",
+        "err_sb_title": "Errore SimBrief",
+        "err_sb_http": "Errore HTTP: ",
+        "err_sb_msg": "Impossibile scaricare il piano da SimBrief:\n",
+        "err_sc_title": "Errore SimConnect",
+        "err_sc_msg": "Assicurati che MSFS sia aperto.\nDettaglio: "
+    },
+    "EN": {
+        "lang_btn": " IT",
+        "fetch_ofp": "Fetch OFP",
+        "load_pln": "Load .PLN",
+        "connect_msfs": "Connect MSFS",
+        "reconnect_msfs": "Reconnect MSFS",
+        "status_disc": "● Status: Disconnected from MSFS",
+        "status_conn": "● Status: Connected to MSFS (SimConnect Active)",
+        "status_err": "● Status: MSFS Connection Error",
+        "col_wp": "Waypoint",
+        "col_lat": "Latitude",
+        "col_lon": "Longitude",
+        "col_dist": "Distance (NM)",
+        "col_dep": "DEP",
+        "col_dest": "DEST",
+        "prev_wp": "<< Prev WP",
+        "next_wp": "Next WP >>",
+        "start_nav": "START NAV (HDG)",
+        "stop_nav": "NAV ACTIVE (STOP)",
+        "route_done": "ROUTE COMPLETED",
+        "exit": "EXIT",
+        "howto_title": "HOW TO - MB-339 Cockpit Setup & Guide",
+        "howto_header": "OPERATING GUIDE & COCKPIT SETUP",
+        "howto_close": "CLOSE GUIDE",
+        "howto_text": (
+            "1. LOADING FLIGHT PLAN (SIMBRIEF OR .PLN FILE):\n"
+            "   • From SimBrief: enter your Pilot ID and click 'Fetch OFP'.\n"
+            "   • From Local File: click 'Load .PLN' and select a .pln file\n"
+            "     generated by MSFS 2024 / 2020, Little Navmap, or SimBrief.\n"
+            "   • Click 'Connect MSFS' to activate the SimConnect bridge.\n\n"
+            "2. MB-339 COCKPIT SETUP:\n"
+            "   • Turn on the aircraft electrical power and avionics.\n"
+            "   • Locate the Flight Director / Autopilot panel on the glareshield.\n"
+            "   • Ensure the Autopilot is engaged (Master ON).\n"
+            "   • Press the HDG (Heading) button to enable heading bug tracking.\n"
+            "   • To hold altitude, engage ALT HOLD once at cruise altitude.\n\n"
+            "3. AUTOMATIC NAVIGATION:\n"
+            "   • Click 'START NAV (HDG)' in the application.\n"
+            "   • The utility calculates real-time Bearing and automatically\n"
+            "     updates the Heading Bug on your aircraft HSI.\n"
+            "   • Upon reaching a waypoint (within 0.8 NM), the app automatically\n"
+            "     sequences to the next waypoint until destination.\n\n"
+            "4. MANUAL ROUTE SEQUENCING:\n"
+            "   • Use the '<< Prev WP' and 'Next WP >>' buttons exclusively\n"
+            "     to manually switch the active waypoint at any time."
+        ),
+        "dlg_open_pln": "Select MSFS Flight Plan (.pln)",
+        "dlg_all_files": "All files",
+        "warn_title": "Warning",
+        "warn_sb_id": "Please enter your SimBrief Pilot ID.",
+        "warn_not_conn_title": "Not Connected",
+        "warn_not_conn_msg": "Please connect to MSFS first!",
+        "warn_no_route_title": "No Flight Plan",
+        "warn_no_route_msg": "Please fetch a SimBrief OFP or load a .PLN file first!",
+        "warn_pln_coords_title": "Missing Coordinates in .PLN file",
+        "warn_pln_coords_msg": (
+            "This .pln file (MSFS 2024 format) only contains waypoint identifiers without geographic coordinates.\n\n"
+            "Make sure your SimBrief ID is entered correctly or export the file in 'FS2020 (.pln)' format from SimBrief / Little Navmap."
+        ),
+        "err_pln_title": "PLN Load Error",
+        "err_pln_msg": "Unable to read the .pln file:\n",
+        "err_sb_title": "SimBrief Error",
+        "err_sb_http": "HTTP Error: ",
+        "err_sb_msg": "Unable to fetch flight plan from SimBrief:\n",
+        "err_sc_title": "SimConnect Error",
+        "err_sc_msg": "Make sure MSFS is running.\nDetail: "
+    }
+}
+
+
 class MB339NavApp:
     def __init__(self, root):
         self.root = root
         self.root.title("MB-339 SimBrief & PLN GPS Nav System")
         self.root.geometry("740x720")
-        self.root.configure(bg="#121417")  # Sfondo scuro stile dark app
+        self.root.configure(bg="#121417")
         self.root.resizable(False, False)
 
         # Intercetta la chiusura della finestra dalla "X" in alto a destra
         self.root.protocol("WM_DELETE_WINDOW", self.quit_app)
 
-        # Imposta e genera l'icona GPS
+        # Imposta e genera l'icona GPS e le icone delle bandiere
         self.setup_gps_icon()
+        self.create_flag_icons()
 
-        # Variabili di stato
+        # Variabili di stato e lingua (Avvio predefinito in Inglese "EN")
+        self.lang = "EN"
+        self.conn_state = "disc"
+        self.route_completed = False
         self.simbrief_user = tk.StringVar(value="312844")
         self.mask_timer = None
         self.waypoints = []
@@ -40,10 +182,15 @@ class MB339NavApp:
         self.nav_active = False
         self.connected = False
         self.howto_win = None
+        self.howto_header_lbl = None
+        self.howto_txt_box = None
+        self.howto_btn_close = None
         
-        # Coordinate attuali dell'aereo
+        # Dati rotta
         self.plane_lat = None
         self.plane_lon = None
+        self.origin_icao = "---"
+        self.dest_icao = "---"
 
         # Oggetti SimConnect
         self.sm = None
@@ -63,8 +210,89 @@ class MB339NavApp:
         self.worker_thread = threading.Thread(target=self.sim_loop, daemon=True)
         self.worker_thread.start()
 
+    def create_flag_icons(self):
+        """Disegna le bandiere Italiana (IT) e Britannica (GB) in pixel-art per il pulsante lingua."""
+        self.flag_it = tk.PhotoImage(width=18, height=12)
+        for y in range(12):
+            for x in range(18):
+                if x < 6:
+                    color = "#009246"
+                elif x < 12:
+                    color = "#ffffff"
+                else:
+                    color = "#ce2b37"
+                self.flag_it.put(color, (x, y))
+
+        self.flag_gb = tk.PhotoImage(width=18, height=12)
+        for y in range(12):
+            for x in range(18):
+                color = "#012169"
+                diag1 = abs(x - (y * 1.5))
+                diag2 = abs(x - ((11 - y) * 1.5))
+                if diag1 < 2.2 or diag2 < 2.2:
+                    color = "#ffffff"
+                if diag1 < 1.0 or diag2 < 1.0:
+                    color = "#c8102e"
+                if 7 <= x <= 10 or 4 <= y <= 7:
+                    color = "#ffffff"
+                if 8 <= x <= 9 or 5 <= y <= 6:
+                    color = "#c8102e"
+                self.flag_gb.put(color, (x, y))
+
+    def get_target_flag(self):
+        return self.flag_gb if self.lang == "IT" else self.flag_it
+
+    def t(self, key):
+        return TRANSLATIONS[self.lang].get(key, key)
+
+    def toggle_language(self):
+        self.lang = "EN" if self.lang == "IT" else "IT"
+        self.apply_language()
+
+    def apply_language(self):
+        self.btn_lang.config(text=self.t("lang_btn"), image=self.get_target_flag())
+        self.btn_sb.config(text=self.t("fetch_ofp"))
+        self.btn_pln.config(text=self.t("load_pln"))
+
+        if self.conn_state == "conn":
+            self.btn_conn.config(text=self.t("reconnect_msfs"))
+            self.lbl_status.config(text=self.t("status_conn"), fg="#4ec9b0")
+        elif self.conn_state == "err":
+            self.btn_conn.config(text=self.t("connect_msfs"))
+            self.lbl_status.config(text=self.t("status_err"), fg="#ff5555")
+        else:
+            self.btn_conn.config(text=self.t("connect_msfs"))
+            self.lbl_status.config(text=self.t("status_disc"), fg="#ff5555")
+
+        self.lbl_dep_title.config(text=self.t("col_dep"))
+        self.lbl_dest_title.config(text=self.t("col_dest"))
+
+        self.tree.heading("ident", text=self.t("col_wp"))
+        self.tree.heading("lat", text=self.t("col_lat"))
+        self.tree.heading("lon", text=self.t("col_lon"))
+        self.tree.heading("dist", text=self.t("col_dist"))
+
+        self.btn_prev.config(text=self.t("prev_wp"))
+        self.btn_next.config(text=self.t("next_wp"))
+        self.btn_exit.config(text=self.t("exit"))
+
+        if self.nav_active:
+            self.btn_nav.config(text=self.t("stop_nav"), bg="#4ec9b0", fg="#121417")
+        elif self.route_completed:
+            self.btn_nav.config(text=self.t("route_done"), bg="#4ec9b0", fg="#121417")
+        else:
+            self.btn_nav.config(text=self.t("start_nav"), bg="#ffb000", fg="#121417")
+
+        if self.howto_win is not None and tk.Toplevel.winfo_exists(self.howto_win):
+            self.howto_win.title(self.t("howto_title"))
+            self.howto_header_lbl.config(text=self.t("howto_header"))
+            self.howto_btn_close.config(text=self.t("howto_close"))
+            self.howto_txt_box.config(state="normal")
+            self.howto_txt_box.delete("1.0", "end")
+            self.howto_txt_box.insert("1.0", self.t("howto_text"))
+            self.howto_txt_box.config(state="disabled")
+
     def setup_gps_icon(self):
-        """Carica l'icona sia in modalità script che dentro l'eseguibile PyInstaller."""
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
         ico_path = os.path.join(base_path, "gps_icon.ico")
 
@@ -111,7 +339,6 @@ class MB339NavApp:
         style = ttk.Style()
         style.theme_use("clam")
         
-        # Configurazione Stile Tabella (Treeview) scuro stile dashboard
         style.configure("Dark.Treeview", 
                         background="#1a1d24", 
                         foreground="#e0e0e0", 
@@ -124,16 +351,33 @@ class MB339NavApp:
                         font=("Segoe UI", 9, "bold"))
         style.map("Dark.Treeview", background=[('selected', '#333b4d')])
 
-        # --- TOP BAR: Logo / Titolo Applicazione ---
+        # --- TOP BAR ---
         top_bar = tk.Frame(self.root, bg="#121417", padx=15, pady=10)
         top_bar.pack(fill="x")
 
         tk.Label(top_bar, text="✈  MB339-NAV-FS", fg="#ffb000", bg="#121417", font=("Segoe UI", 12, "bold")).pack(side="left")
         
         self.btn_howto = tk.Button(top_bar, text="HOW TO", command=self.toggle_howto, bg="#646695", fg="#ffffff", activebackground="#787ab0", activeforeground="#ffffff", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=2)
-        self.btn_howto.pack(side="right", padx=5)
+        self.btn_howto.pack(side="right", padx=4)
 
-        # --- FRAME 1: Configurazione SimBrief, File PLN & Connessione ---
+        self.btn_lang = tk.Button(
+            top_bar,
+            text=self.t("lang_btn"),
+            image=self.get_target_flag(),
+            compound="left",
+            command=self.toggle_language,
+            bg="#262b36",
+            fg="#ffffff",
+            activebackground="#333b4d",
+            activeforeground="#ffffff",
+            font=("Segoe UI", 9, "bold"),
+            relief="flat",
+            padx=8,
+            pady=2
+        )
+        self.btn_lang.pack(side="right", padx=4)
+
+        # --- FRAME 1: Configurazione ---
         cfg_frame = tk.Frame(self.root, bg="#1a1d24", bd=0, padx=12, pady=12)
         cfg_frame.pack(fill="x", padx=15, pady=5)
 
@@ -154,53 +398,62 @@ class MB339NavApp:
         self.entry_sb.bind("<KeyRelease>", self.on_id_activity)
         self.entry_sb.bind("<FocusIn>", self.on_id_activity)
 
-        btn_sb = tk.Button(cfg_frame, text="Scarica OFP", command=self.load_simbrief, bg="#0066cc", fg="white", activebackground="#0055aa", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
-        btn_sb.grid(row=0, column=2, padx=5, pady=5)
+        self.btn_sb = tk.Button(cfg_frame, text=self.t("fetch_ofp"), command=self.load_simbrief, bg="#0066cc", fg="white", activebackground="#0055aa", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
+        self.btn_sb.grid(row=0, column=2, padx=5, pady=5)
 
-        btn_pln = tk.Button(cfg_frame, text="Carica .PLN", command=self.load_pln_file, bg="#d97706", fg="white", activebackground="#b45309", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
-        btn_pln.grid(row=0, column=3, padx=5, pady=5)
+        self.btn_pln = tk.Button(cfg_frame, text=self.t("load_pln"), command=self.load_pln_file, bg="#d97706", fg="white", activebackground="#b45309", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
+        self.btn_pln.grid(row=0, column=3, padx=5, pady=5)
 
-        self.btn_conn = tk.Button(cfg_frame, text="Connetti MSFS", command=self.connect_msfs, bg="#2d6a2e", fg="white", activebackground="#235423", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
+        self.btn_conn = tk.Button(cfg_frame, text=self.t("connect_msfs"), command=self.connect_msfs, bg="#2d6a2e", fg="white", activebackground="#235423", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
         self.btn_conn.grid(row=0, column=4, padx=5, pady=5)
 
-        self.lbl_status = tk.Label(cfg_frame, text="● Stato: Disconnesso da MSFS", fg="#ff5555", bg="#1a1d24", font=("Segoe UI", 9))
+        self.lbl_status = tk.Label(cfg_frame, text=self.t("status_disc"), fg="#ff5555", bg="#1a1d24", font=("Segoe UI", 9))
         self.lbl_status.grid(row=1, column=0, columnspan=5, pady=(8, 0), sticky="w")
 
-        # --- FRAME 2: Display Digitale Stile Radio/GPS (LED Panel) ---
-        nav_frame = tk.Frame(self.root, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=15, pady=12)
+        # --- FRAME 2: Display Digitale Stile Radio/GPS (LED Panel) con DEP e DEST ---
+        nav_frame = tk.Frame(self.root, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=12, pady=12)
         nav_frame.pack(fill="x", padx=15, pady=8)
 
         tk.Label(nav_frame, text="ACTIVE WAYPOINT", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold")).grid(row=0, column=0, sticky="w")
         tk.Label(nav_frame, text="BEARING (HDG)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold")).grid(row=0, column=1)
-        tk.Label(nav_frame, text="DISTANCE (NM)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold")).grid(row=0, column=2, sticky="e")
+        tk.Label(nav_frame, text="DISTANCE (NM)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold")).grid(row=0, column=2)
+        self.lbl_dep_title = tk.Label(nav_frame, text=self.t("col_dep"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        self.lbl_dep_title.grid(row=0, column=3)
+        self.lbl_dest_title = tk.Label(nav_frame, text=self.t("col_dest"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        self.lbl_dest_title.grid(row=0, column=4, sticky="e")
 
-        self.lbl_wp_name = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 24, "bold"))
+        self.lbl_wp_name = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
         self.lbl_wp_name.grid(row=1, column=0, sticky="w", pady=(2, 0))
 
-        self.lbl_brg = tk.Label(nav_frame, text="---°", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 24, "bold"))
-        self.lbl_brg.grid(row=1, column=1, padx=45, pady=(2, 0))
+        self.lbl_brg = tk.Label(nav_frame, text="---°", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
+        self.lbl_brg.grid(row=1, column=1, padx=20, pady=(2, 0))
 
-        self.lbl_dist = tk.Label(nav_frame, text="--.-", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 24, "bold"))
-        self.lbl_dist.grid(row=1, column=2, sticky="e", pady=(2, 0))
+        self.lbl_dist = tk.Label(nav_frame, text="--.-", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
+        self.lbl_dist.grid(row=1, column=2, padx=15, pady=(2, 0))
 
-        # Separatore visivo interno
+        self.lbl_dep = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
+        self.lbl_dep.grid(row=1, column=3, padx=15, pady=(2, 0))
+
+        self.lbl_dest = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
+        self.lbl_dest.grid(row=1, column=4, sticky="e", pady=(2, 0))
+
         sep = tk.Frame(nav_frame, bg="#1a1d24", height=1)
-        sep.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(8, 6))
+        sep.grid(row=2, column=0, columnspan=5, sticky="ew", pady=(8, 6))
 
         self.lbl_pos = tk.Label(nav_frame, text="GPS POS: LAT --.----  |  LON --.----", fg="#3399ff", bg="#0b0c0e", font=("Consolas", 9, "bold"))
-        self.lbl_pos.grid(row=3, column=0, columnspan=3, sticky="w")
+        self.lbl_pos.grid(row=3, column=0, columnspan=5, sticky="w")
 
-        # --- FRAME 3: Tabella Waypoint Rotta (Stile Scuro) ---
+        # --- FRAME 3: Tabella Waypoint Rotta ---
         list_frame = tk.Frame(self.root, bg="#121417")
         list_frame.pack(fill="both", expand=True, padx=15, pady=5)
 
         columns = ("idx", "ident", "lat", "lon", "dist")
         self.tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=11, selectmode="browse", style="Dark.Treeview")
         self.tree.heading("idx", text="#")
-        self.tree.heading("ident", text="Waypoint")
-        self.tree.heading("lat", text="Latitudine")
-        self.tree.heading("lon", text="Longitudine")
-        self.tree.heading("dist", text="Distanza (NM)")
+        self.tree.heading("ident", text=self.t("col_wp"))
+        self.tree.heading("lat", text=self.t("col_lat"))
+        self.tree.heading("lon", text=self.t("col_lon"))
+        self.tree.heading("dist", text=self.t("col_dist"))
 
         self.tree.column("idx", width=45, anchor="center")
         self.tree.column("ident", width=130, anchor="center")
@@ -208,7 +461,6 @@ class MB339NavApp:
         self.tree.column("lon", width=150, anchor="center")
         self.tree.column("dist", width=150, anchor="center")
 
-        # Disattiva interazione mouse sulla tabella
         self.tree.bind("<Button-1>", lambda e: "break")
         self.tree.bind("<ButtonRelease-1>", lambda e: "break")
         self.tree.bind("<B1-Motion>", lambda e: "break")
@@ -220,21 +472,21 @@ class MB339NavApp:
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        # --- FRAME 4: Controlli di Navigazione e Uscita ---
+        # --- FRAME 4: Controlli ---
         ctrl_frame = tk.Frame(self.root, bg="#1a1d24", bd=0, padx=12, pady=12)
         ctrl_frame.pack(fill="x", padx=15, pady=10)
 
-        btn_prev = tk.Button(ctrl_frame, text="<< WP Prec.", command=self.prev_wp, bg="#262b36", fg="#e0e0e0", activebackground="#333b4d", activeforeground="white", font=("Segoe UI", 9, "bold"), width=12, relief="flat", pady=6)
-        btn_prev.pack(side="left", padx=4)
+        self.btn_prev = tk.Button(ctrl_frame, text=self.t("prev_wp"), command=self.prev_wp, bg="#262b36", fg="#e0e0e0", activebackground="#333b4d", activeforeground="white", font=("Segoe UI", 9, "bold"), width=12, relief="flat", pady=6)
+        self.btn_prev.pack(side="left", padx=4)
 
-        self.btn_nav = tk.Button(ctrl_frame, text="AVVIA NAV (HDG)", command=self.toggle_nav, bg="#ffb000", fg="#121417", activebackground="#ffc833", activeforeground="#121417", font=("Segoe UI", 10, "bold"), width=20, relief="flat", pady=6)
+        self.btn_nav = tk.Button(ctrl_frame, text=self.t("start_nav"), command=self.toggle_nav, bg="#ffb000", fg="#121417", activebackground="#ffc833", activeforeground="#121417", font=("Segoe UI", 10, "bold"), width=20, relief="flat", pady=6)
         self.btn_nav.pack(side="left", expand=True, padx=4)
 
-        btn_next = tk.Button(ctrl_frame, text="WP Succ. >>", command=self.next_wp, bg="#262b36", fg="#e0e0e0", activebackground="#333b4d", activeforeground="white", font=("Segoe UI", 9, "bold"), width=12, relief="flat", pady=6)
-        btn_next.pack(side="left", padx=4)
+        self.btn_next = tk.Button(ctrl_frame, text=self.t("next_wp"), command=self.next_wp, bg="#262b36", fg="#e0e0e0", activebackground="#333b4d", activeforeground="white", font=("Segoe UI", 9, "bold"), width=12, relief="flat", pady=6)
+        self.btn_next.pack(side="left", padx=4)
 
-        btn_exit = tk.Button(ctrl_frame, text="ESCI", command=self.quit_app, bg="#a83232", fg="white", activebackground="#c53f3f", activeforeground="white", font=("Segoe UI", 9, "bold"), width=9, relief="flat", pady=6)
-        btn_exit.pack(side="right", padx=4)
+        self.btn_exit = tk.Button(ctrl_frame, text=self.t("exit"), command=self.quit_app, bg="#a83232", fg="white", activebackground="#c53f3f", activeforeground="white", font=("Segoe UI", 9, "bold"), width=9, relief="flat", pady=6)
+        self.btn_exit.pack(side="right", padx=4)
 
     def toggle_howto(self):
         if self.howto_win is not None and tk.Toplevel.winfo_exists(self.howto_win):
@@ -242,72 +494,48 @@ class MB339NavApp:
             self.howto_win = None
         else:
             self.howto_win = tk.Toplevel(self.root)
-            self.howto_win.title("HOW TO - MB-339 Cockpit Setup & Guida")
+            self.howto_win.title(self.t("howto_title"))
             
             x = self.root.winfo_rootx()
             y = self.root.winfo_rooty()
             width = self.root.winfo_width()
             height = self.root.winfo_height()
             
-            # Altezza aumentata di 80px per mostrare tutte le righe senza scroll
-            howto_height = height + 80
-            self.howto_win.geometry(f"680x{howto_height}+{x + width + 10}+{max(10, y - 30)}")
+            self.howto_win.geometry(f"680x{height}+{x + width + 10}+{y}")
             self.howto_win.configure(bg="#121417")
             self.howto_win.resizable(False, False)
             
             self.howto_win.protocol("WM_DELETE_WINDOW", self.close_howto)
 
-            header_lbl = tk.Label(
+            self.howto_header_lbl = tk.Label(
                 self.howto_win, 
-                text="GUIDA OPERATIVA & COCKPIT SETUP", 
+                text=self.t("howto_header"), 
                 fg="#ffb000", 
                 bg="#121417", 
                 font=("Segoe UI", 13, "bold")
             )
-            header_lbl.pack(pady=(15, 8), padx=20, anchor="w")
+            self.howto_header_lbl.pack(pady=(15, 8), padx=20, anchor="w")
 
-            instructions = (
-                "1. CARICAMENTO ROTTA (SIMBRIEF O FILE .PLN):\n"
-                "   • Da SimBrief: inserisci il tuo Pilot ID e clicca su 'Scarica OFP'.\n"
-                "   • Da File Locale: clicca su 'Carica .PLN' e seleziona un file .pln\n"
-                "     generato da MSFS 2024 / 2020, Little Navmap o SimBrief.\n"
-                "   • Clicca su 'Connetti MSFS' per attivare il ponte SimConnect.\n\n"
-                "2. SETUP NEL COCKPIT DELL'MB-339:\n"
-                "   • Accendi l'impianto elettrico e l'avionica del velivolo.\n"
-                "   • Individua il pannello del Flight Director / Autopilota sul glareshield.\n"
-                "   • Assicurati che l'autopilota sia inserito (Master ON).\n"
-                "   • Premi il pulsante HDG (Heading) per abilitare il controllo di prua.\n"
-                "   • Se desideri mantenere la quota, inserisci ALT HOLD a quota di crociera.\n\n"
-                "3. NAVIGAZIONE AUTOMATICA:\n"
-                "   • Clicca su 'AVVIA NAV (HDG)' nell'applicazione.\n"
-                "   • L'utility calcolerà in tempo reale il rilevamento (Bearing) e\n"
-                "     aggiornerà automaticamente l'Heading Bug sul tuo HSI.\n"
-                "   • Al raggiungimento del waypoint (sotto 0.8 NM), l'app passerà\n"
-                "     in automatico al punto successivo fino a destinazione.\n\n"
-                "4. GESTIONE MANUALE DELLA ROTTA:\n"
-                "   • Usa esclusivamente i pulsanti '<< WP Prec.' e 'WP Succ. >>'\n"
-                "     per cambiare il waypoint attivo in qualsiasi momento."
-            )
-
-            txt_box = tk.Text(
+            self.howto_txt_box = tk.Text(
                 self.howto_win, 
                 wrap="word", 
                 bg="#0b0c0e", 
                 fg="#e0e0e0", 
-                font=("Consolas", 11), 
+                font=("Consolas", 11),
+                height=26,
                 padx=15, 
-                pady=15, 
+                pady=12, 
                 bd=0, 
                 highlightthickness=1,
                 highlightbackground="#262b36"
             )
-            txt_box.insert("1.0", instructions)
-            txt_box.config(state="disabled")
-            txt_box.pack(fill="both", expand=True, padx=20, pady=8)
+            self.howto_txt_box.insert("1.0", self.t("howto_text"))
+            self.howto_txt_box.config(state="disabled")
+            self.howto_txt_box.pack(fill="x", padx=20, pady=6)
 
-            btn_close = tk.Button(
+            self.howto_btn_close = tk.Button(
                 self.howto_win, 
-                text="CHIUDI GUIDA", 
+                text=self.t("howto_close"), 
                 command=self.close_howto, 
                 bg="#a83232", 
                 fg="white", 
@@ -316,7 +544,7 @@ class MB339NavApp:
                 padx=20, 
                 pady=8
             )
-            btn_close.pack(pady=(5, 15))
+            self.howto_btn_close.pack(pady=(8, 15))
 
     def close_howto(self):
         if self.howto_win is not None:
@@ -353,10 +581,6 @@ class MB339NavApp:
 
     @staticmethod
     def parse_world_position(pos_str):
-        """
-        Converte una stringa <WorldPosition> di MSFS (es. N45° 58' 42.96",E13° 2' 58.92",+000200.00)
-        oppure coordinate decimali separate da virgola in (lat, lon) float.
-        """
         parts = [p.strip() for p in pos_str.split(",")]
         if len(parts) < 2:
             return None, None
@@ -385,10 +609,6 @@ class MB339NavApp:
         return lat, lon
 
     def fetch_simbrief_coords_map(self):
-        """
-        Scarica un dizionario {IDENT: (lat, lon)} dall'ultimo OFP di SimBrief dell'utente
-        per risolvere istantaneamente i file .pln MSFS 2024 privi di tag <WorldPosition>.
-        """
         coords_map = {}
         user = self.simbrief_user.get().strip()
         if not user:
@@ -423,10 +643,9 @@ class MB339NavApp:
         return coords_map
 
     def load_pln_file(self):
-        """Apre una finestra di dialogo per caricare un file .pln (MSFS 2020 e MSFS 2024)."""
         file_path = filedialog.askopenfilename(
-            title="Seleziona Piano di Volo MSFS (.pln)",
-            filetypes=[("MSFS Flight Plan", "*.pln"), ("Tutti i file", "*.*")]
+            title=self.t("dlg_open_pln"),
+            filetypes=[("MSFS Flight Plan", "*.pln"), (self.t("dlg_all_files"), "*.*")]
         )
         if not file_path:
             return
@@ -436,19 +655,15 @@ class MB339NavApp:
             root = tree.getroot()
             wps = []
 
-            # Verifica se siamo in presenza di un file .pln MSFS 2024 (AppVersionMajor 12) senza WorldPosition
             has_world_pos = root.find(".//WorldPosition") is not None
             sb_coords = {} if has_world_pos else self.fetch_simbrief_coords_map()
 
-            # 1. Nel formato MSFS 2024 <DepartureID> è fuori da <ATCWaypoint>
             dep_node = root.find(".//DepartureID")
-            if dep_node is not None and dep_node.text:
-                dep_id = dep_node.text.strip().upper()
-                if dep_id in sb_coords:
-                    lat, lon = sb_coords[dep_id]
-                    wps.append({"name": dep_id, "lat": lat, "lon": lon})
+            origin_icao = dep_node.text.strip().upper() if dep_node is not None and dep_node.text else ""
+            if origin_icao and origin_icao in sb_coords:
+                lat, lon = sb_coords[origin_icao]
+                wps.append({"name": origin_icao, "lat": lat, "lon": lon})
 
-            # 2. Scorre tutti i blocchi <ATCWaypoint>
             for wp_elem in root.findall(".//ATCWaypoint"):
                 ident = wp_elem.get("id")
                 if not ident:
@@ -463,12 +678,10 @@ class MB339NavApp:
 
                 lat, lon = None, None
 
-                # Caso A: Tag standard <WorldPosition> (MSFS 2020 / Little Navmap)
                 wp_pos = wp_elem.find("WorldPosition")
                 if wp_pos is not None and wp_pos.text:
                     lat, lon = self.parse_world_position(wp_pos.text)
 
-                # Caso B: Tag <Latitude> e <Longitude>
                 if lat is None or lon is None:
                     lat_node = wp_elem.find(".//Latitude")
                     lon_node = wp_elem.find(".//Longitude")
@@ -479,7 +692,6 @@ class MB339NavApp:
                         except ValueError:
                             pass
 
-                # Caso C: Formato MSFS 2024 senza coordinate (risolto tramite mappa SimBrief)
                 if (lat is None or lon is None) and ident.upper() in sb_coords:
                     lat, lon = sb_coords[ident.upper()]
 
@@ -487,23 +699,23 @@ class MB339NavApp:
                     if not wps or wps[-1]["name"] != ident:
                         wps.append({"name": ident, "lat": lat, "lon": lon})
 
-            # 3. Nel formato MSFS 2024 <DestinationID> è fuori da <ATCWaypoint>
             dest_node = root.find(".//DestinationID")
-            if dest_node is not None and dest_node.text:
-                dest_id = dest_node.text.strip().upper()
-                if dest_id in sb_coords:
-                    lat, lon = sb_coords[dest_id]
-                    if not wps or wps[-1]["name"] != dest_id:
-                        wps.append({"name": dest_id, "lat": lat, "lon": lon})
+            dest_icao = dest_node.text.strip().upper() if dest_node is not None and dest_node.text else ""
+            if dest_icao and dest_icao in sb_coords:
+                lat, lon = sb_coords[dest_icao]
+                if not wps or wps[-1]["name"] != dest_icao:
+                    wps.append({"name": dest_icao, "lat": lat, "lon": lon})
 
             if not wps:
-                messagebox.showwarning(
-                    "Coordinate Mancanti nel file .PLN",
-                    "Questo file .pln (formato MSFS 2024) contiene solo i nomi dei waypoint senza coordinate geografiche.\n\n"
-                    "Assicurati che il tuo SimBrief ID sia inserito correttamente o esporta il file in formato 'FS2020 (.pln)' da SimBrief / Little Navmap."
-                )
+                messagebox.showwarning(self.t("warn_pln_coords_title"), self.t("warn_pln_coords_msg"))
                 return
 
+            self.origin_icao = origin_icao if origin_icao else (wps[0]["name"] if wps else "---")
+            self.dest_icao = dest_icao if dest_icao else (wps[-1]["name"] if wps else "---")
+            self.lbl_dep.config(text=self.origin_icao)
+            self.lbl_dest.config(text=self.dest_icao)
+
+            self.route_completed = False
             self.waypoints = wps
             self.current_wp_index = 1 if len(wps) > 1 else 0
             self.refresh_tree()
@@ -519,12 +731,12 @@ class MB339NavApp:
                 self.lbl_dist.config(text="--.-")
 
         except Exception as e:
-            messagebox.showerror("Errore Caricamento PLN", f"Impossibile leggere il file .pln:\n{e}")
+            messagebox.showerror(self.t("err_pln_title"), f"{self.t('err_pln_msg')}{e}")
 
     def load_simbrief(self):
         user = self.simbrief_user.get().strip()
         if not user:
-            messagebox.showwarning("Attenzione", "Inserisci il tuo SimBrief Pilot ID.")
+            messagebox.showwarning(self.t("warn_title"), self.t("warn_sb_id"))
             return
 
         self.schedule_id_mask()
@@ -536,12 +748,14 @@ class MB339NavApp:
                 root = ET.fromstring(response.content)
                 wps = []
 
+                origin_icao = ""
                 orig = root.find(".//origin")
                 if orig is not None:
                     icao = orig.find("icao_code")
                     lat = orig.find("pos_lat") if orig.find("pos_lat") is not None else orig.find("lat")
                     lon = orig.find("pos_long") if orig.find("pos_long") is not None else orig.find("lon")
                     if icao is not None and lat is not None and lon is not None:
+                        origin_icao = icao.text.strip()
                         wps.append({"name": icao.text, "lat": float(lat.text), "lon": float(lon.text)})
 
                 for fix in root.findall(".//navlog/fix"):
@@ -557,15 +771,23 @@ class MB339NavApp:
                         except ValueError:
                             continue
 
+                dest_icao = ""
                 dest = root.find(".//destination")
                 if dest is not None:
                     icao = dest.find("icao_code")
                     lat = dest.find("pos_lat") if dest.find("pos_lat") is not None else dest.find("lat")
                     lon = dest.find("pos_long") if dest.find("pos_long") is not None else dest.find("lon")
                     if icao is not None and lat is not None and lon is not None:
+                        dest_icao = icao.text.strip()
                         if not wps or wps[-1]["name"] != icao.text:
                             wps.append({"name": icao.text, "lat": float(lat.text), "lon": float(lon.text)})
 
+                self.origin_icao = origin_icao if origin_icao else "---"
+                self.dest_icao = dest_icao if dest_icao else "---"
+                self.lbl_dep.config(text=self.origin_icao)
+                self.lbl_dest.config(text=self.dest_icao)
+
+                self.route_completed = False
                 self.waypoints = wps
                 self.current_wp_index = 1 if len(wps) > 1 else 0
                 self.refresh_tree()
@@ -579,9 +801,9 @@ class MB339NavApp:
                     else:
                         self.lbl_wp_name.config(text=active_wp["name"])
             else:
-                messagebox.showerror("Errore SimBrief", f"Errore HTTP: {response.status_code}")
+                messagebox.showerror(self.t("err_sb_title"), f"{self.t('err_sb_http')}{response.status_code}")
         except Exception as e:
-            messagebox.showerror("Errore", f"Impossibile scaricare il piano da SimBrief:\n{e}")
+            messagebox.showerror(self.t("err_sb_title"), f"{self.t('err_sb_msg')}{e}")
 
     def refresh_tree(self):
         for row in self.tree.get_children():
@@ -611,31 +833,34 @@ class MB339NavApp:
             self.ev_hdg_hold = self.ae.find("AP_HDG_HOLD_ON")
 
             self.connected = True
-            self.lbl_status.config(text="● Stato: Connesso a MSFS (SimConnect Attivo)", fg="#4ec9b0")
-            self.btn_conn.config(text="Riconnetti MSFS", bg="#235423")
+            self.conn_state = "conn"
+            self.lbl_status.config(text=self.t("status_conn"), fg="#4ec9b0")
+            self.btn_conn.config(text=self.t("reconnect_msfs"), bg="#235423")
         except Exception as e:
             self.connected = False
-            self.lbl_status.config(text="● Stato: Errore connessione MSFS", fg="#ff5555")
-            messagebox.showerror("Errore SimConnect", f"Assicurati che MSFS sia aperto.\nDettaglio: {e}")
+            self.conn_state = "err"
+            self.lbl_status.config(text=self.t("status_err"), fg="#ff5555")
+            messagebox.showerror(self.t("err_sc_title"), f"{self.t('err_sc_msg')}{e}")
 
     def toggle_nav(self):
         if not self.connected:
-            messagebox.showwarning("Non Connesso", "Connettiti prima a MSFS!")
+            messagebox.showwarning(self.t("warn_not_conn_title"), self.t("warn_not_conn_msg"))
             return
         if not self.waypoints:
-            messagebox.showwarning("Nessuna Rotta", "Scarica prima il piano da SimBrief o carica un file .PLN!")
+            messagebox.showwarning(self.t("warn_no_route_title"), self.t("warn_no_route_msg"))
             return
 
+        self.route_completed = False
         self.nav_active = not self.nav_active
         if self.nav_active:
-            self.btn_nav.config(text="NAV ATTIVA (STOP)", bg="#4ec9b0", fg="#121417")
+            self.btn_nav.config(text=self.t("stop_nav"), bg="#4ec9b0", fg="#121417")
             try:
                 if self.ev_hdg_hold:
                     self.ev_hdg_hold()
             except Exception:
                 pass
         else:
-            self.btn_nav.config(text="AVVIA NAV (HDG)", bg="#ffb000", fg="#121417")
+            self.btn_nav.config(text=self.t("start_nav"), bg="#ffb000", fg="#121417")
 
     def prev_wp(self):
         if self.waypoints and self.current_wp_index > 0:
@@ -704,7 +929,8 @@ class MB339NavApp:
                                         self.root.after(0, self.refresh_tree)
                                     else:
                                         self.nav_active = False
-                                        self.root.after(0, self.btn_nav.config, {"text": "ROTTA COMPLETATA", "bg": "#4ec9b0", "fg": "#121417"})
+                                        self.route_completed = True
+                                        self.root.after(0, self.btn_nav.config, {"text": self.t("route_done"), "bg": "#4ec9b0", "fg": "#121417"})
                 except Exception:
                     pass
             time.sleep(1)
