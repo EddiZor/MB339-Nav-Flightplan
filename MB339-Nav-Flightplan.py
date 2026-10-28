@@ -161,7 +161,7 @@ TRANSLATIONS = {
 class MB339NavApp:
     def __init__(self, root):
         self.root = root
-       self.root.title("MB-339 SimBrief & PLN GPS Nav System v2.0")
+        self.root.title("MB-339 SimBrief & PLN GPS Nav System v2.0")
         self.root.geometry("740x720")
         self.root.configure(bg="#121417")
         self.root.resizable(False, False)

@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['main.py'],
+    ['MB339-Nav-Flightplan.py'],
     pathex=[],
     binaries=[('C:\\Users\\zorzi\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\site-packages\\SimConnect\\SimConnect.dll', 'SimConnect')],
     datas=[],
@@ -35,5 +35,6 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    version='version.txt',
     icon=['gps_icon.ico'],
 )
