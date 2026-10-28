@@ -1,0 +1,15 @@
+# Cartelle generate da PyInstaller e build_exe.py
+build/
+dist/
+
+# File di configurazione di PyInstaller
+*.spec
+
+# Cache e file compilati di Python
+__pycache__/
+*.py[cod]
+
+# Ambienti virtuali
+.venv/
+env/
+venv/
