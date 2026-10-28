@@ -1,5 +1,16 @@
 # MB339-Nav-Flightplan
 
+# MB339-Nav-Flightplan ✈️ (v2.0)
+
+
+## 🚀 What's New in Version 2.0
+* **Non-Blocking UI:** Network requests (SimBrief) and file parsing are now handled in the background. The app no longer freezes during data fetching.
+* **Thread-Safe Telemetry:** Real-time MSFS telemetry and UI updates are fully synchronized, eliminating crashes and race conditions.
+* **Smart SimConnect Handling:** The application now gracefully detects and handles unexpected MSFS disconnections without crashing.
+
+
+An external GPS navigation and flight plan (SimBrief & .PLN) utility designed specifically for the IndiaFoxtEcho MB-339 in Microsoft Flight Simulator.
+
 **MB339-Nav-Flightplan** is a lightweight open-source utility developed in Python with a modern dark-avionics GUI, designed specifically for **Microsoft Flight Simulator (2020 & 2024)** and tailored for the IndiaFoxtEcho **Aermacchi MB-339**.
 
 ---
@@ -44,6 +55,11 @@
    ```bash
    python main.py
    ```
+
+## 📥 Download & Installation
+1. Download the latest `MB339-Nav-Flightplan-v2.0.zip` from the [GitHub Releases](https://github.com/EddiZor/MB339-Nav-Flightplan/releases/latest) page or from [Flightsim.to](INSERISCI_QUI_IL_TUO_LINK_FLIGHTSIM).
+2. Extract the ZIP archive to a folder of your choice.
+3. Run `MB339-Nav-Flightplan.exe` (No installation required).
 
 ---
 
