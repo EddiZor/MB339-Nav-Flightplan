@@ -1,0 +1,36 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout del codice
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.12'
+
+    - name: Installazione Dipendenze
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+        pip install -r requirements.txt
+
+    - name: Compilazione con PyInstaller
+      run: python build_exe.py
+
+    - name: Upload Artifact (Salvataggio ZIP)
+      uses: actions/upload-artifact@v4
+      with:
+        name: MB339-Nav-Flightplan-Release
+        path: dist/*.zip
+        retention-days: 7
