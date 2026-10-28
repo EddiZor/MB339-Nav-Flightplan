@@ -28,6 +28,7 @@ TRANSLATIONS = {
         "status_disc": "● Stato: Disconnesso da MSFS",
         "status_conn": "● Stato: Connesso a MSFS (SimConnect Attivo)",
         "status_err": "● Stato: Errore connessione MSFS",
+        "status_loading": "● Stato: Download dati in corso...",
         "col_wp": "Waypoint",
         "col_lat": "Latitudine",
         "col_lon": "Longitudine",
@@ -95,6 +96,7 @@ TRANSLATIONS = {
         "status_disc": "● Status: Disconnected from MSFS",
         "status_conn": "● Status: Connected to MSFS (SimConnect Active)",
         "status_err": "● Status: MSFS Connection Error",
+        "status_loading": "● Status: Fetching flight plan data...",
         "col_wp": "Waypoint",
         "col_lat": "Latitude",
         "col_lon": "Longitude",
@@ -159,13 +161,16 @@ TRANSLATIONS = {
 class MB339NavApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("MB-339 SimBrief & PLN GPS Nav System")
+       self.root.title("MB-339 SimBrief & PLN GPS Nav System v2.0")
         self.root.geometry("740x720")
         self.root.configure(bg="#121417")
         self.root.resizable(False, False)
 
         # Intercetta la chiusura della finestra dalla "X" in alto a destra
         self.root.protocol("WM_DELETE_WINDOW", self.quit_app)
+
+        # Lock di sincronizzazione per il multi-threading
+        self.data_lock = threading.Lock()
 
         # Imposta e genera l'icona GPS e le icone delle bandiere
         self.setup_gps_icon()
@@ -398,10 +403,10 @@ class MB339NavApp:
         self.entry_sb.bind("<KeyRelease>", self.on_id_activity)
         self.entry_sb.bind("<FocusIn>", self.on_id_activity)
 
-        self.btn_sb = tk.Button(cfg_frame, text=self.t("fetch_ofp"), command=self.load_simbrief, bg="#0066cc", fg="white", activebackground="#0055aa", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
+        self.btn_sb = tk.Button(cfg_frame, text=self.t("fetch_ofp"), command=self.start_load_simbrief_thread, bg="#0066cc", fg="white", activebackground="#0055aa", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
         self.btn_sb.grid(row=0, column=2, padx=5, pady=5)
 
-        self.btn_pln = tk.Button(cfg_frame, text=self.t("load_pln"), command=self.load_pln_file, bg="#d97706", fg="white", activebackground="#b45309", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
+        self.btn_pln = tk.Button(cfg_frame, text=self.t("load_pln"), command=self.start_load_pln_thread, bg="#d97706", fg="white", activebackground="#b45309", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
         self.btn_pln.grid(row=0, column=3, padx=5, pady=5)
 
         self.btn_conn = tk.Button(cfg_frame, text=self.t("connect_msfs"), command=self.connect_msfs, bg="#2d6a2e", fg="white", activebackground="#235423", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
@@ -568,8 +573,9 @@ class MB339NavApp:
             self.entry_sb.config(show="*")
 
     def quit_app(self):
-        self.nav_active = False
-        self.running = False
+        with self.data_lock:
+            self.nav_active = False
+            self.running = False
         self.close_howto()
         try:
             if self.sm:
@@ -642,14 +648,16 @@ class MB339NavApp:
 
         return coords_map
 
-    def load_pln_file(self):
+    def start_load_pln_thread(self):
         file_path = filedialog.askopenfilename(
             title=self.t("dlg_open_pln"),
             filetypes=[("MSFS Flight Plan", "*.pln"), (self.t("dlg_all_files"), "*.*")]
         )
-        if not file_path:
-            return
+        if file_path:
+            self.lbl_status.config(text=self.t("status_loading"), fg="#ffb000")
+            threading.Thread(target=self.load_pln_file, args=(file_path,), daemon=True).start()
 
+    def load_pln_file(self, file_path):
         try:
             tree = ET.parse(file_path)
             root = tree.getroot()
@@ -707,40 +715,35 @@ class MB339NavApp:
                     wps.append({"name": dest_icao, "lat": lat, "lon": lon})
 
             if not wps:
-                messagebox.showwarning(self.t("warn_pln_coords_title"), self.t("warn_pln_coords_msg"))
+                self.root.after(0, lambda: messagebox.showwarning(self.t("warn_pln_coords_title"), self.t("warn_pln_coords_msg")))
+                self.root.after(0, self.update_status_after_action)
                 return
 
-            self.origin_icao = origin_icao if origin_icao else (wps[0]["name"] if wps else "---")
-            self.dest_icao = dest_icao if dest_icao else (wps[-1]["name"] if wps else "---")
-            self.lbl_dep.config(text=self.origin_icao)
-            self.lbl_dest.config(text=self.dest_icao)
+            with self.data_lock:
+                self.origin_icao = origin_icao if origin_icao else (wps[0]["name"] if wps else "---")
+                self.dest_icao = dest_icao if dest_icao else (wps[-1]["name"] if wps else "---")
+                self.route_completed = False
+                self.waypoints = wps
+                self.current_wp_index = 1 if len(wps) > 1 else 0
 
-            self.route_completed = False
-            self.waypoints = wps
-            self.current_wp_index = 1 if len(wps) > 1 else 0
-            self.refresh_tree()
-
-            active_wp = self.waypoints[self.current_wp_index]
-            if self.plane_lat is not None and self.plane_lon is not None:
-                brg = self.calculate_bearing(self.plane_lat, self.plane_lon, active_wp["lat"], active_wp["lon"])
-                dist_nm = self.calculate_distance_nm(self.plane_lat, self.plane_lon, active_wp["lat"], active_wp["lon"])
-                self.update_telemetry_ui(active_wp["name"], brg, dist_nm)
-            else:
-                self.lbl_wp_name.config(text=active_wp["name"])
-                self.lbl_brg.config(text="---°")
-                self.lbl_dist.config(text="--.-")
+            self.root.after(0, self.finalize_route_load)
 
         except Exception as e:
-            messagebox.showerror(self.t("err_pln_title"), f"{self.t('err_pln_msg')}{e}")
+            self.root.after(0, lambda: messagebox.showerror(self.t("err_pln_title"), f"{self.t('err_pln_msg')}{e}"))
+            self.root.after(0, self.update_status_after_action)
 
-    def load_simbrief(self):
+    def start_load_simbrief_thread(self):
         user = self.simbrief_user.get().strip()
         if not user:
             messagebox.showwarning(self.t("warn_title"), self.t("warn_sb_id"))
             return
 
         self.schedule_id_mask()
+        self.lbl_status.config(text=self.t("status_loading"), fg="#ffb000")
+        threading.Thread(target=self.load_simbrief, daemon=True).start()
 
+    def load_simbrief(self):
+        user = self.simbrief_user.get().strip()
         url = f"https://www.simbrief.com/api/xml.fetcher.php?userid={user}"
         try:
             response = requests.get(url, timeout=10)
@@ -782,28 +785,44 @@ class MB339NavApp:
                         if not wps or wps[-1]["name"] != icao.text:
                             wps.append({"name": icao.text, "lat": float(lat.text), "lon": float(lon.text)})
 
-                self.origin_icao = origin_icao if origin_icao else "---"
-                self.dest_icao = dest_icao if dest_icao else "---"
-                self.lbl_dep.config(text=self.origin_icao)
-                self.lbl_dest.config(text=self.dest_icao)
+                with self.data_lock:
+                    self.origin_icao = origin_icao if origin_icao else "---"
+                    self.dest_icao = dest_icao if dest_icao else "---"
+                    self.route_completed = False
+                    self.waypoints = wps
+                    self.current_wp_index = 1 if len(wps) > 1 else 0
 
-                self.route_completed = False
-                self.waypoints = wps
-                self.current_wp_index = 1 if len(wps) > 1 else 0
-                self.refresh_tree()
-
-                if self.waypoints:
-                    active_wp = self.waypoints[self.current_wp_index]
-                    if self.plane_lat is not None and self.plane_lon is not None:
-                        brg = self.calculate_bearing(self.plane_lat, self.plane_lon, active_wp["lat"], active_wp["lon"])
-                        dist_nm = self.calculate_distance_nm(self.plane_lat, self.plane_lon, active_wp["lat"], active_wp["lon"])
-                        self.update_telemetry_ui(active_wp["name"], brg, dist_nm)
-                    else:
-                        self.lbl_wp_name.config(text=active_wp["name"])
+                self.root.after(0, self.finalize_route_load)
             else:
-                messagebox.showerror(self.t("err_sb_title"), f"{self.t('err_sb_http')}{response.status_code}")
+                self.root.after(0, lambda: messagebox.showerror(self.t("err_sb_title"), f"{self.t('err_sb_http')}{response.status_code}"))
+                self.root.after(0, self.update_status_after_action)
         except Exception as e:
-            messagebox.showerror(self.t("err_sb_title"), f"{self.t('err_sb_msg')}{e}")
+            self.root.after(0, lambda: messagebox.showerror(self.t("err_sb_title"), f"{self.t('err_sb_msg')}{e}"))
+            self.root.after(0, self.update_status_after_action)
+
+    def finalize_route_load(self):
+        with self.data_lock:
+            self.lbl_dep.config(text=self.origin_icao)
+            self.lbl_dest.config(text=self.dest_icao)
+            self.refresh_tree()
+
+            if self.waypoints and self.current_wp_index < len(self.waypoints):
+                active_wp = self.waypoints[self.current_wp_index]
+                if self.plane_lat is not None and self.plane_lon is not None:
+                    brg = self.calculate_bearing(self.plane_lat, self.plane_lon, active_wp["lat"], active_wp["lon"])
+                    dist_nm = self.calculate_distance_nm(self.plane_lat, self.plane_lon, active_wp["lat"], active_wp["lon"])
+                    self.update_telemetry_ui(active_wp["name"], brg, dist_nm)
+                else:
+                    self.lbl_wp_name.config(text=active_wp["name"])
+                    self.lbl_brg.config(text="---°")
+                    self.lbl_dist.config(text="--.-")
+        self.update_status_after_action()
+
+    def update_status_after_action(self):
+        if self.connected:
+            self.lbl_status.config(text=self.t("status_conn"), fg="#4ec9b0")
+        else:
+            self.lbl_status.config(text=self.t("status_disc"), fg="#ff5555")
 
     def refresh_tree(self):
         for row in self.tree.get_children():
@@ -850,9 +869,12 @@ class MB339NavApp:
             messagebox.showwarning(self.t("warn_no_route_title"), self.t("warn_no_route_msg"))
             return
 
-        self.route_completed = False
-        self.nav_active = not self.nav_active
-        if self.nav_active:
+        with self.data_lock:
+            self.route_completed = False
+            self.nav_active = not self.nav_active
+            is_active = self.nav_active
+
+        if is_active:
             self.btn_nav.config(text=self.t("stop_nav"), bg="#4ec9b0", fg="#121417")
             try:
                 if self.ev_hdg_hold:
@@ -863,14 +885,16 @@ class MB339NavApp:
             self.btn_nav.config(text=self.t("start_nav"), bg="#ffb000", fg="#121417")
 
     def prev_wp(self):
-        if self.waypoints and self.current_wp_index > 0:
-            self.current_wp_index -= 1
-            self.refresh_tree()
+        with self.data_lock:
+            if self.waypoints and self.current_wp_index > 0:
+                self.current_wp_index -= 1
+                self.refresh_tree()
 
     def next_wp(self):
-        if self.waypoints and self.current_wp_index < len(self.waypoints) - 1:
-            self.current_wp_index += 1
-            self.refresh_tree()
+        with self.data_lock:
+            if self.waypoints and self.current_wp_index < len(self.waypoints) - 1:
+                self.current_wp_index += 1
+                self.refresh_tree()
 
     @staticmethod
     def calculate_bearing(lat1, lon1, lat2, lon2):
@@ -892,20 +916,30 @@ class MB339NavApp:
 
     def sim_loop(self):
         update_counter = 0
-        while self.running:
-            if self.connected and self.aq:
+        while True:
+            with self.data_lock:
+                if not self.running:
+                    break
+                is_connected = self.connected
+                has_aq = self.aq is not None
+                nav_act = self.nav_active
+                wps = list(self.waypoints)
+                wp_idx = self.current_wp_index
+
+            if is_connected and has_aq:
                 try:
                     p_lat = self.aq.get("PLANE_LATITUDE")
                     p_lon = self.aq.get("PLANE_LONGITUDE")
 
                     if p_lat is not None and p_lon is not None and p_lat != 0.0:
-                        self.plane_lat = p_lat
-                        self.plane_lon = p_lon
+                        with self.data_lock:
+                            self.plane_lat = p_lat
+                            self.plane_lon = p_lon
                         
                         self.root.after(0, self.lbl_pos.config, {"text": f"GPS POS: LAT {p_lat:.4f}  |  LON {p_lon:.4f}"})
 
-                        if self.waypoints and self.current_wp_index < len(self.waypoints):
-                            target = self.waypoints[self.current_wp_index]
+                        if wps and wp_idx < len(wps):
+                            target = wps[wp_idx]
                             brg = self.calculate_bearing(p_lat, p_lon, target["lat"], target["lon"])
                             dist_nm = self.calculate_distance_nm(p_lat, p_lon, target["lat"], target["lon"])
 
@@ -916,7 +950,7 @@ class MB339NavApp:
                                 update_counter = 0
                                 self.root.after(0, self.refresh_tree)
 
-                            if self.nav_active:
+                            if nav_act:
                                 if self.ev_hdg_set:
                                     try:
                                         self.ev_hdg_set(int(round(brg)))
@@ -924,15 +958,21 @@ class MB339NavApp:
                                         pass
 
                                 if dist_nm < 0.8:
-                                    if self.current_wp_index < len(self.waypoints) - 1:
-                                        self.current_wp_index += 1
-                                        self.root.after(0, self.refresh_tree)
-                                    else:
-                                        self.nav_active = False
-                                        self.route_completed = True
-                                        self.root.after(0, self.btn_nav.config, {"text": self.t("route_done"), "bg": "#4ec9b0", "fg": "#121417"})
+                                    with self.data_lock:
+                                        if self.current_wp_index < len(self.waypoints) - 1:
+                                            self.current_wp_index += 1
+                                            self.root.after(0, self.refresh_tree)
+                                        else:
+                                            self.nav_active = False
+                                            self.route_completed = True
+                                            self.root.after(0, self.btn_nav.config, {"text": self.t("route_done"), "bg": "#4ec9b0", "fg": "#121417"})
                 except Exception:
-                    pass
+                    # In caso di perdita di connessione a SimConnect o chiusura simulatore
+                    with self.data_lock:
+                        self.connected = False
+                        self.conn_state = "disc"
+                    self.root.after(0, lambda: self.lbl_status.config(text=self.t("status_disc"), fg="#ff5555"))
+            
             time.sleep(1)
 
     def update_telemetry_ui(self, name, brg, dist_nm):

@@ -4,8 +4,13 @@ import subprocess
 import shutil
 import zipfile
 
+# Definisci qui la versione corrente dell'applicazione per aggiornare automaticamente lo ZIP
+APP_VERSION = "2.0"
+# Assicurati che questo sia il nome esatto del tuo script Python principale
+MAIN_SCRIPT = "MB339-Nav-Flightplan.py"
+
 def build():
-    print("=== Avvio compilazione e pacchettizzazione per Flightsim.to ===")
+    print(f"=== Avvio compilazione e pacchettizzazione per Flightsim.to (v{APP_VERSION}) ===")
     
     # 1. Pulisci le build precedenti
     for d in ["build", "dist"]:
@@ -34,18 +39,23 @@ def build():
         "--clean"
     ]
 
+    # Include automaticamente i metadati della versione nell'EXE se il file esiste
+    if os.path.exists("version.txt"):
+        cmd.append("--version-file=version.txt")
+        print("Incluso file metadati version.txt")
+
     if simconnect_dll_path:
         cmd.append(f"--add-binary={simconnect_dll_path};SimConnect")
         print(f"Inclusa SimConnect.dll da: {simconnect_dll_path}")
 
-    cmd.append("main.py")
+    cmd.append(MAIN_SCRIPT)
 
     print("Esecuzione PyInstaller in corso...")
     subprocess.check_call(cmd)
 
     # 4. Creazione archivio ZIP per Flightsim.to
     dist_dir = "dist"
-    zip_name = "MB339-Nav-Flightplan-v1.0.zip"
+    zip_name = f"MB339-Nav-Flightplan-v{APP_VERSION}.zip"
     zip_path = os.path.join(dist_dir, zip_name)
 
     print(f"Creazione archivio di rilascio: {zip_path}")
