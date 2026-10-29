@@ -425,47 +425,52 @@ class MB339NavApp:
         self.lbl_status = tk.Label(cfg_frame, text=self.t("status_disc"), fg="#ff5555", bg="#1a1d24", font=("Segoe UI", 9))
         self.lbl_status.grid(row=1, column=0, columnspan=5, pady=(8, 0), sticky="w")
 
-        # --- FRAME 2: Display Digitale Stile Radio/GPS (LED Panel) con DEP, DEST, ETE, EFOB, XTK ---
+# --- FRAME 2: Display Digitale Stile Radio/GPS (LED Panel) con DEP, DEST, ETE, EFOB, XTK ---
         nav_frame = tk.Frame(self.root, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=12, pady=12)
         nav_frame.pack(fill="x", padx=15, pady=8)
 
-        tk.Label(nav_frame, text="ACTIVE WAYPOINT", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold")).grid(row=0, column=0, sticky="w")
-        tk.Label(nav_frame, text="BEARING (HDG)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold")).grid(row=0, column=1)
-        tk.Label(nav_frame, text="DISTANCE (NM)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold")).grid(row=0, column=2)
-        self.lbl_dep_title = tk.Label(nav_frame, text=self.t("col_dep"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        # Configura le 8 colonne in modo che si espandano per riempire lo spazio vuoto in modo uniforme
+        for i in range(8):
+            nav_frame.grid_columnconfigure(i, weight=1)
+
+        tk.Label(nav_frame, text="ACTIVE WAYPOINT", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold")).grid(row=0, column=0)
+        tk.Label(nav_frame, text="BEARING (HDG)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold")).grid(row=0, column=1)
+        tk.Label(nav_frame, text="DISTANCE (NM)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold")).grid(row=0, column=2)
+        self.lbl_dep_title = tk.Label(nav_frame, text=self.t("col_dep"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold"))
         self.lbl_dep_title.grid(row=0, column=3)
-        self.lbl_dest_title = tk.Label(nav_frame, text=self.t("col_dest"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        self.lbl_dest_title = tk.Label(nav_frame, text=self.t("col_dest"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold"))
         self.lbl_dest_title.grid(row=0, column=4)
-        self.lbl_ete_title = tk.Label(nav_frame, text=self.t("col_ete"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        self.lbl_ete_title = tk.Label(nav_frame, text=self.t("col_ete"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold"))
         self.lbl_ete_title.grid(row=0, column=5)
-        self.lbl_efob_title = tk.Label(nav_frame, text=self.t("col_efob"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        self.lbl_efob_title = tk.Label(nav_frame, text=self.t("col_efob"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold"))
         self.lbl_efob_title.grid(row=0, column=6)
-        self.lbl_xtk_title = tk.Label(nav_frame, text=self.t("col_xtk"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
-        self.lbl_xtk_title.grid(row=0, column=7, sticky="e")
+        self.lbl_xtk_title = tk.Label(nav_frame, text=self.t("col_xtk"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold"))
+        self.lbl_xtk_title.grid(row=0, column=7)
 
-        self.lbl_wp_name = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_wp_name.grid(row=1, column=0, sticky="w", pady=(2, 0))
+        # Rimosso lo sticky e il padx per permettere il centraggio all'interno della colonna estesa
+        self.lbl_wp_name = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 26, "bold"))
+        self.lbl_wp_name.grid(row=1, column=0, pady=(2, 0))
 
-        self.lbl_brg = tk.Label(nav_frame, text="---°", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_brg.grid(row=1, column=1, padx=12, pady=(2, 0))
+        self.lbl_brg = tk.Label(nav_frame, text="---°", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 26, "bold"))
+        self.lbl_brg.grid(row=1, column=1, pady=(2, 0))
 
-        self.lbl_dist = tk.Label(nav_frame, text="--.-", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_dist.grid(row=1, column=2, padx=12, pady=(2, 0))
+        self.lbl_dist = tk.Label(nav_frame, text="--.-", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 26, "bold"))
+        self.lbl_dist.grid(row=1, column=2, pady=(2, 0))
 
-        self.lbl_dep = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_dep.grid(row=1, column=3, padx=12, pady=(2, 0))
+        self.lbl_dep = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 26, "bold"))
+        self.lbl_dep.grid(row=1, column=3, pady=(2, 0))
 
-        self.lbl_dest = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_dest.grid(row=1, column=4, padx=12, pady=(2, 0))
+        self.lbl_dest = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 26, "bold"))
+        self.lbl_dest.grid(row=1, column=4, pady=(2, 0))
 
-        self.lbl_ete = tk.Label(nav_frame, text="--:--", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_ete.grid(row=1, column=5, padx=12, pady=(2, 0))
+        self.lbl_ete = tk.Label(nav_frame, text="--:--", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 26, "bold"))
+        self.lbl_ete.grid(row=1, column=5, pady=(2, 0))
 
-        self.lbl_efob = tk.Label(nav_frame, text="---", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_efob.grid(row=1, column=6, padx=12, pady=(2, 0))
+        self.lbl_efob = tk.Label(nav_frame, text="---", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 26, "bold"))
+        self.lbl_efob.grid(row=1, column=6, pady=(2, 0))
 
-        self.lbl_xtk = tk.Label(nav_frame, text="---", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_xtk.grid(row=1, column=7, sticky="e", pady=(2, 0))
+        self.lbl_xtk = tk.Label(nav_frame, text="---", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 26, "bold"))
+        self.lbl_xtk.grid(row=1, column=7, pady=(2, 0))
 
         sep = tk.Frame(nav_frame, bg="#1a1d24", height=1)
         sep.grid(row=2, column=0, columnspan=8, sticky="ew", pady=(8, 6))
