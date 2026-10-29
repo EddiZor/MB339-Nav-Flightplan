@@ -1,5 +1,59 @@
 # MB339-Nav-Flightplan
 
+
+MB339-Nav-Flightplan ✈️ (v2.3)
+
+An external GPS navigation and flight plan (SimBrief & .PLN) utility designed specifically for the IndiaFoxtEcho MB-339 in Microsoft Flight Simulator.
+
+Since the MB-339 lacks an internal moving map or standard GPS, this lightweight desktop companion acts as your digital navigator, connecting directly to the simulator's autopilot via SimConnect.
+
+🚀 What's New in Version 2.3 (The Ultimate Navigation Upgrade)
+
+Auto-Sync Waypoint: The app intelligently analyzes your current aircraft position upon connection and automatically selects the correct active flight plan leg. No more routing back to the departure airport if you restart the app mid-flight!
+
+Live ETE & EFOB: Added real-time calculation for Estimated Time Enroute and Estimated Fuel On Board (in KG) to your final destination, based on current ground speed and engine fuel flow.
+
+Cross-Track Error (XTK): A new XTK indicator (in NM) helps you monitor course deviation. The value turns red to alert you if you drift off the ideal flight path by more than 2.0 NM.
+
+Dynamic & Responsive UI: The main display has been enlarged and dynamically adjusts to perfectly distribute telemetry data.
+
+Non-Blocking UI & Thread-Safe Telemetry: Network requests (SimBrief) and real-time MSFS telemetry are fully synchronized in the background, eliminating crashes and UI freezes.
+
+Smart SimConnect Handling: The application gracefully detects unexpected MSFS disconnections without crashing.
+
+🌟 Key Features
+
+Seamless SimBrief Integration: Fetch your operational flight plan (OFP) directly using your SimBrief Pilot ID.
+
+Local .PLN Support: Load standard MSFS 2020/2024 or Little Navmap flight plans with full coordinate parsing.
+
+Automatic Navigation (HDG Sync): Calculates real-time bearing and automatically syncs the Heading Bug on the MB-339's HSI. It sequences to the next waypoint automatically when within 0.8 NM.
+
+Bilingual Interface: Fully supports English and Italian UI.
+
+📥 Download & Installation
+
+Download the latest MB339-Nav-Flightplan-v2.3.zip from the GitHub Releases page.
+
+Extract the ZIP archive to a folder of your choice.
+
+Run MB339-Nav-Flightplan.exe (No installation required).
+
+🛠️ How to Use (Cockpit Setup)
+
+Load Route: Enter your SimBrief ID and click Fetch OFP, or click Load .PLN for local files.
+
+Connect: Click Connect MSFS.
+
+Aircraft Setup: Turn on electrical power/avionics in your MB-339.
+
+Autopilot ON: Engage the Autopilot Master (ON) on the glareshield panel.
+
+HDG Mode: Press the HDG button on the aircraft's autopilot panel.
+
+Start Navigation: Click START NAV (HDG) on the desktop app. The utility will take over and guide the aircraft to the destination!
+
+
 # MB339-Nav-Flightplan ✈️ (v2.0)
 
 
