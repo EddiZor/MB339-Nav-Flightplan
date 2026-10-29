@@ -35,6 +35,9 @@ TRANSLATIONS = {
         "col_dist": "Distanza (NM)",
         "col_dep": "DEP",
         "col_dest": "DEST",
+        "col_ete": "ETE (DEST)",
+        "col_efob": "EFOB (KG)",
+        "col_xtk": "XTK (NM)",
         "prev_wp": "<< WP Prec.",
         "next_wp": "WP Succ. >>",
         "start_nav": "AVVIA NAV (HDG)",
@@ -103,6 +106,9 @@ TRANSLATIONS = {
         "col_dist": "Distance (NM)",
         "col_dep": "DEP",
         "col_dest": "DEST",
+        "col_ete": "ETE (DEST)",
+        "col_efob": "EFOB (KG)",
+        "col_xtk": "XTK (NM)",
         "prev_wp": "<< Prev WP",
         "next_wp": "Next WP >>",
         "start_nav": "START NAV (HDG)",
@@ -161,8 +167,8 @@ TRANSLATIONS = {
 class MB339NavApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("MB-339 SimBrief & PLN GPS Nav System v2.0")
-        self.root.geometry("740x720")
+        self.root.title("MB-339 SimBrief & PLN GPS Nav System v2.3")
+        self.root.geometry("1040x720") 
         self.root.configure(bg="#121417")
         self.root.resizable(False, False)
 
@@ -186,6 +192,7 @@ class MB339NavApp:
         self.current_wp_index = 0
         self.nav_active = False
         self.connected = False
+        self.route_synced = False
         self.howto_win = None
         self.howto_header_lbl = None
         self.howto_txt_box = None
@@ -271,6 +278,9 @@ class MB339NavApp:
 
         self.lbl_dep_title.config(text=self.t("col_dep"))
         self.lbl_dest_title.config(text=self.t("col_dest"))
+        self.lbl_ete_title.config(text=self.t("col_ete"))
+        self.lbl_efob_title.config(text=self.t("col_efob"))
+        self.lbl_xtk_title.config(text=self.t("col_xtk"))
 
         self.tree.heading("ident", text=self.t("col_wp"))
         self.tree.heading("lat", text=self.t("col_lat"))
@@ -415,7 +425,7 @@ class MB339NavApp:
         self.lbl_status = tk.Label(cfg_frame, text=self.t("status_disc"), fg="#ff5555", bg="#1a1d24", font=("Segoe UI", 9))
         self.lbl_status.grid(row=1, column=0, columnspan=5, pady=(8, 0), sticky="w")
 
-        # --- FRAME 2: Display Digitale Stile Radio/GPS (LED Panel) con DEP e DEST ---
+        # --- FRAME 2: Display Digitale Stile Radio/GPS (LED Panel) con DEP, DEST, ETE, EFOB, XTK ---
         nav_frame = tk.Frame(self.root, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=12, pady=12)
         nav_frame.pack(fill="x", padx=15, pady=8)
 
@@ -425,28 +435,43 @@ class MB339NavApp:
         self.lbl_dep_title = tk.Label(nav_frame, text=self.t("col_dep"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
         self.lbl_dep_title.grid(row=0, column=3)
         self.lbl_dest_title = tk.Label(nav_frame, text=self.t("col_dest"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
-        self.lbl_dest_title.grid(row=0, column=4, sticky="e")
+        self.lbl_dest_title.grid(row=0, column=4)
+        self.lbl_ete_title = tk.Label(nav_frame, text=self.t("col_ete"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        self.lbl_ete_title.grid(row=0, column=5)
+        self.lbl_efob_title = tk.Label(nav_frame, text=self.t("col_efob"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        self.lbl_efob_title.grid(row=0, column=6)
+        self.lbl_xtk_title = tk.Label(nav_frame, text=self.t("col_xtk"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 8, "bold"))
+        self.lbl_xtk_title.grid(row=0, column=7, sticky="e")
 
         self.lbl_wp_name = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
         self.lbl_wp_name.grid(row=1, column=0, sticky="w", pady=(2, 0))
 
         self.lbl_brg = tk.Label(nav_frame, text="---°", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_brg.grid(row=1, column=1, padx=20, pady=(2, 0))
+        self.lbl_brg.grid(row=1, column=1, padx=12, pady=(2, 0))
 
         self.lbl_dist = tk.Label(nav_frame, text="--.-", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_dist.grid(row=1, column=2, padx=15, pady=(2, 0))
+        self.lbl_dist.grid(row=1, column=2, padx=12, pady=(2, 0))
 
         self.lbl_dep = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_dep.grid(row=1, column=3, padx=15, pady=(2, 0))
+        self.lbl_dep.grid(row=1, column=3, padx=12, pady=(2, 0))
 
         self.lbl_dest = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 22, "bold"))
-        self.lbl_dest.grid(row=1, column=4, sticky="e", pady=(2, 0))
+        self.lbl_dest.grid(row=1, column=4, padx=12, pady=(2, 0))
+
+        self.lbl_ete = tk.Label(nav_frame, text="--:--", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 22, "bold"))
+        self.lbl_ete.grid(row=1, column=5, padx=12, pady=(2, 0))
+
+        self.lbl_efob = tk.Label(nav_frame, text="---", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 22, "bold"))
+        self.lbl_efob.grid(row=1, column=6, padx=12, pady=(2, 0))
+
+        self.lbl_xtk = tk.Label(nav_frame, text="---", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 22, "bold"))
+        self.lbl_xtk.grid(row=1, column=7, sticky="e", pady=(2, 0))
 
         sep = tk.Frame(nav_frame, bg="#1a1d24", height=1)
-        sep.grid(row=2, column=0, columnspan=5, sticky="ew", pady=(8, 6))
+        sep.grid(row=2, column=0, columnspan=8, sticky="ew", pady=(8, 6))
 
         self.lbl_pos = tk.Label(nav_frame, text="GPS POS: LAT --.----  |  LON --.----", fg="#3399ff", bg="#0b0c0e", font=("Consolas", 9, "bold"))
-        self.lbl_pos.grid(row=3, column=0, columnspan=5, sticky="w")
+        self.lbl_pos.grid(row=3, column=0, columnspan=8, sticky="w")
 
         # --- FRAME 3: Tabella Waypoint Rotta ---
         list_frame = tk.Frame(self.root, bg="#121417")
@@ -461,10 +486,10 @@ class MB339NavApp:
         self.tree.heading("dist", text=self.t("col_dist"))
 
         self.tree.column("idx", width=45, anchor="center")
-        self.tree.column("ident", width=130, anchor="center")
-        self.tree.column("lat", width=150, anchor="center")
-        self.tree.column("lon", width=150, anchor="center")
-        self.tree.column("dist", width=150, anchor="center")
+        self.tree.column("ident", width=180, anchor="center")
+        self.tree.column("lat", width=210, anchor="center")
+        self.tree.column("lon", width=210, anchor="center")
+        self.tree.column("dist", width=210, anchor="center")
 
         self.tree.bind("<Button-1>", lambda e: "break")
         self.tree.bind("<ButtonRelease-1>", lambda e: "break")
@@ -614,6 +639,16 @@ class MB339NavApp:
         lon = dms_to_dd(parts[1])
         return lat, lon
 
+    @staticmethod
+    def calculate_xtk_nm(lat1, lon1, lat2, lon2, plane_lat, plane_lon):
+        brg_leg = MB339NavApp.calculate_bearing(lat1, lon1, lat2, lon2)
+        brg_plane = MB339NavApp.calculate_bearing(lat1, lon1, plane_lat, plane_lon)
+        dist_plane = MB339NavApp.calculate_distance_nm(lat1, lon1, plane_lat, plane_lon)
+        
+        diff = math.radians(brg_plane - brg_leg)
+        xtk = math.asin(math.sin(dist_plane / 3440.065) * math.sin(diff)) * 3440.065
+        return xtk
+
     def fetch_simbrief_coords_map(self):
         coords_map = {}
         user = self.simbrief_user.get().strip()
@@ -725,6 +760,7 @@ class MB339NavApp:
                 self.route_completed = False
                 self.waypoints = wps
                 self.current_wp_index = 1 if len(wps) > 1 else 0
+                self.route_synced = False 
 
             self.root.after(0, self.finalize_route_load)
 
@@ -791,6 +827,7 @@ class MB339NavApp:
                     self.route_completed = False
                     self.waypoints = wps
                     self.current_wp_index = 1 if len(wps) > 1 else 0
+                    self.route_synced = False 
 
                 self.root.after(0, self.finalize_route_load)
             else:
@@ -811,11 +848,14 @@ class MB339NavApp:
                 if self.plane_lat is not None and self.plane_lon is not None:
                     brg = self.calculate_bearing(self.plane_lat, self.plane_lon, active_wp["lat"], active_wp["lon"])
                     dist_nm = self.calculate_distance_nm(self.plane_lat, self.plane_lon, active_wp["lat"], active_wp["lon"])
-                    self.update_telemetry_ui(active_wp["name"], brg, dist_nm)
+                    self.update_telemetry_ui(active_wp["name"], brg, dist_nm, "--:--", "---", "---", "#4ec9b0")
                 else:
                     self.lbl_wp_name.config(text=active_wp["name"])
                     self.lbl_brg.config(text="---°")
                     self.lbl_dist.config(text="--.-")
+                    self.lbl_ete.config(text="--:--")
+                    self.lbl_efob.config(text="---")
+                    self.lbl_xtk.config(text="---", fg="#4ec9b0")
         self.update_status_after_action()
 
     def update_status_after_action(self):
@@ -935,7 +975,26 @@ class MB339NavApp:
                         with self.data_lock:
                             self.plane_lat = p_lat
                             self.plane_lon = p_lon
-                        
+                            
+                            if wps and not self.route_synced:
+                                if len(wps) > 1:
+                                    best_idx = 1
+                                    min_error = float('inf')
+                                    for i in range(len(wps) - 1):
+                                        wp1 = wps[i]
+                                        wp2 = wps[i+1]
+                                        d1 = self.calculate_distance_nm(wp1["lat"], wp1["lon"], p_lat, p_lon)
+                                        d2 = self.calculate_distance_nm(p_lat, p_lon, wp2["lat"], wp2["lon"])
+                                        leg = self.calculate_distance_nm(wp1["lat"], wp1["lon"], wp2["lat"], wp2["lon"])
+                                        error = (d1 + d2) - leg
+                                        if error < min_error:
+                                            min_error = error
+                                            best_idx = i + 1
+                                    self.current_wp_index = best_idx
+                                    wp_idx = best_idx 
+                                self.route_synced = True
+                                self.root.after(0, self.refresh_tree)
+
                         self.root.after(0, self.lbl_pos.config, {"text": f"GPS POS: LAT {p_lat:.4f}  |  LON {p_lon:.4f}"})
 
                         if wps and wp_idx < len(wps):
@@ -943,7 +1002,58 @@ class MB339NavApp:
                             brg = self.calculate_bearing(p_lat, p_lon, target["lat"], target["lon"])
                             dist_nm = self.calculate_distance_nm(p_lat, p_lon, target["lat"], target["lon"])
 
-                            self.root.after(0, self.update_telemetry_ui, target["name"], brg, dist_nm)
+                            # XTK Calculation
+                            xtk_str = "---"
+                            xtk_color = "#4ec9b0"
+                            if wp_idx > 0:
+                                prev_wp = wps[wp_idx - 1]
+                                xtk_val = self.calculate_xtk_nm(prev_wp["lat"], prev_wp["lon"], target["lat"], target["lon"], p_lat, p_lon)
+                                xtk_abs = abs(xtk_val)
+                                dir_str = "R" if xtk_val > 0 else "L"
+                                xtk_str = f"{dir_str} {xtk_abs:.1f}"
+                                if xtk_abs > 2.0:
+                                    xtk_color = "#ff5555"
+
+                            total_dist_remaining = dist_nm
+                            for i in range(wp_idx, len(wps) - 1):
+                                total_dist_remaining += self.calculate_distance_nm(wps[i]["lat"], wps[i]["lon"], wps[i+1]["lat"], wps[i+1]["lon"])
+
+                            ete_str = "--:--"
+                            efob_str = "---"
+                            
+                            try:
+                                gs = self.aq.get("GPS_GROUND_SPEED")
+                                if gs is not None:
+                                    gs = gs * 1.94384 
+                                else:
+                                    gs = self.aq.get("AIRSPEED_TRUE")
+
+                                if gs is not None and gs > 30:
+                                    time_hours = total_dist_remaining / gs
+                                    h = int(time_hours)
+                                    m = int((time_hours - h) * 60)
+                                    ete_str = f"{h:02d}:{m:02d}"
+
+                                    fob_gal = self.aq.get("FUEL_TOTAL_QUANTITY")
+                                    
+                                    ff_gph = self.aq.get("ENG_FUEL_FLOW_GPH:1")
+                                    if ff_gph is None:
+                                        ff_pph = self.aq.get("ENG_FUEL_FLOW_PPH:1")
+                                        if ff_pph is not None:
+                                            ff_gph = ff_pph / 6.7 
+
+                                    if fob_gal is not None and ff_gph is not None:
+                                        burn_gal = ff_gph * time_hours
+                                        efob_gal = fob_gal - burn_gal
+                                        if efob_gal < 0: 
+                                            efob_gal = 0
+                                        
+                                        efob_kg = efob_gal * 3.03
+                                        efob_str = f"{int(efob_kg)}"
+                            except Exception:
+                                pass
+
+                            self.root.after(0, self.update_telemetry_ui, target["name"], brg, dist_nm, ete_str, efob_str, xtk_str, xtk_color)
 
                             update_counter += 1
                             if update_counter >= 3:
@@ -967,7 +1077,6 @@ class MB339NavApp:
                                             self.route_completed = True
                                             self.root.after(0, self.btn_nav.config, {"text": self.t("route_done"), "bg": "#4ec9b0", "fg": "#121417"})
                 except Exception:
-                    # In caso di perdita di connessione a SimConnect o chiusura simulatore
                     with self.data_lock:
                         self.connected = False
                         self.conn_state = "disc"
@@ -975,10 +1084,13 @@ class MB339NavApp:
             
             time.sleep(1)
 
-    def update_telemetry_ui(self, name, brg, dist_nm):
+    def update_telemetry_ui(self, name, brg, dist_nm, ete_str, efob_str, xtk_str, xtk_color):
         self.lbl_wp_name.config(text=name)
         self.lbl_brg.config(text=f"{int(round(brg)):03d}°")
         self.lbl_dist.config(text=f"{dist_nm:.1f}")
+        self.lbl_ete.config(text=ete_str)
+        self.lbl_efob.config(text=efob_str)
+        self.lbl_xtk.config(text=xtk_str, fg=xtk_color)
 
 
 if __name__ == "__main__":
