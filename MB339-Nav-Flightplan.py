@@ -4,7 +4,9 @@ import re
 import time
 import math
 import ctypes
+import json
 import threading
+import webbrowser
 import requests
 import xml.etree.ElementTree as ET
 import tkinter as tk
@@ -21,6 +23,7 @@ except Exception:
 TRANSLATIONS = {
     "IT": {
         "lang_btn": " EN",
+        "discord_btn": "DISCORD",
         "fetch_ofp": "Scarica OFP",
         "load_pln": "Carica .PLN",
         "connect_msfs": "Connetti MSFS",
@@ -92,6 +95,7 @@ TRANSLATIONS = {
     },
     "EN": {
         "lang_btn": " IT",
+        "discord_btn": "DISCORD",
         "fetch_ofp": "Fetch OFP",
         "load_pln": "Load .PLN",
         "connect_msfs": "Connect MSFS",
@@ -186,7 +190,12 @@ class MB339NavApp:
         self.lang = "EN"
         self.conn_state = "disc"
         self.route_completed = False
-        self.simbrief_user = tk.StringVar(value="312844")
+        
+        # Gestione configurazione ID SimBrief salvato localmente
+        self.config_file = "mb339_nav_config.json"
+        saved_id = self.load_saved_simbrief_id()
+        self.simbrief_user = tk.StringVar(value=saved_id)
+
         self.mask_timer = None
         self.waypoints = []
         self.current_wp_index = 0
@@ -214,13 +223,33 @@ class MB339NavApp:
 
         self.setup_ui()
 
-        # Avvia il timer iniziale di 3 secondi per mascherare il SimBrief ID predefinito
-        self.schedule_id_mask()
+        # Avvia il timer iniziale di 3 secondi per mascherare l'ID se già presente
+        if saved_id:
+            self.schedule_id_mask()
 
         # Avvia il thread di aggiornamento in background
         self.running = True
         self.worker_thread = threading.Thread(target=self.sim_loop, daemon=True)
         self.worker_thread.start()
+
+    def load_saved_simbrief_id(self):
+        """Legge l'ID SimBrief salvato nel file di configurazione locale."""
+        try:
+            if os.path.exists(self.config_file):
+                with open(self.config_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    return data.get("simbrief_id", "")
+        except Exception:
+            pass
+        return ""
+
+    def save_simbrief_id(self, user_id):
+        """Salva l'ID SimBrief nel file di configurazione locale."""
+        try:
+            with open(self.config_file, "w", encoding="utf-8") as f:
+                json.dump({"simbrief_id": user_id}, f)
+        except Exception:
+            pass
 
     def create_flag_icons(self):
         """Disegna le bandiere Italiana (IT) e Britannica (GB) in pixel-art per il pulsante lingua."""
@@ -263,6 +292,7 @@ class MB339NavApp:
 
     def apply_language(self):
         self.btn_lang.config(text=self.t("lang_btn"), image=self.get_target_flag())
+        self.btn_discord.config(text=self.t("discord_btn"))
         self.btn_sb.config(text=self.t("fetch_ofp"))
         self.btn_pln.config(text=self.t("load_pln"))
 
@@ -306,6 +336,10 @@ class MB339NavApp:
             self.howto_txt_box.delete("1.0", "end")
             self.howto_txt_box.insert("1.0", self.t("howto_text"))
             self.howto_txt_box.config(state="disabled")
+
+    def open_discord(self):
+        """Apre il link del server Discord SKYSIM PILOT nel browser predefinito."""
+        webbrowser.open("https://discord.gg/YYJEnge3SS")
 
     def setup_gps_icon(self):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
@@ -375,6 +409,9 @@ class MB339NavApp:
         self.btn_howto = tk.Button(top_bar, text="HOW TO", command=self.toggle_howto, bg="#646695", fg="#ffffff", activebackground="#787ab0", activeforeground="#ffffff", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=2)
         self.btn_howto.pack(side="right", padx=4)
 
+        self.btn_discord = tk.Button(top_bar, text=self.t("discord_btn"), command=self.open_discord, bg="#5865F2", fg="#ffffff", activebackground="#4752C4", activeforeground="#ffffff", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=2)
+        self.btn_discord.pack(side="right", padx=4)
+
         self.btn_lang = tk.Button(
             top_bar,
             text=self.t("lang_btn"),
@@ -425,11 +462,10 @@ class MB339NavApp:
         self.lbl_status = tk.Label(cfg_frame, text=self.t("status_disc"), fg="#ff5555", bg="#1a1d24", font=("Segoe UI", 9))
         self.lbl_status.grid(row=1, column=0, columnspan=5, pady=(8, 0), sticky="w")
 
-# --- FRAME 2: Display Digitale Stile Radio/GPS (LED Panel) con DEP, DEST, ETE, EFOB, XTK ---
+        # --- FRAME 2: Display Digitale Stile Radio/GPS (ESPANSIVO A TUTTA LARGHEZZA) ---
         nav_frame = tk.Frame(self.root, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=12, pady=12)
         nav_frame.pack(fill="x", padx=15, pady=8)
 
-        # Configura le 8 colonne in modo che si espandano per riempire lo spazio vuoto in modo uniforme
         for i in range(8):
             nav_frame.grid_columnconfigure(i, weight=1)
 
@@ -447,7 +483,6 @@ class MB339NavApp:
         self.lbl_xtk_title = tk.Label(nav_frame, text=self.t("col_xtk"), fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold"))
         self.lbl_xtk_title.grid(row=0, column=7)
 
-        # Rimosso lo sticky e il padx per permettere il centraggio all'interno della colonna estesa
         self.lbl_wp_name = tk.Label(nav_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 26, "bold"))
         self.lbl_wp_name.grid(row=1, column=0, pady=(2, 0))
 
@@ -599,8 +634,10 @@ class MB339NavApp:
         self.mask_timer = self.root.after(3000, self.mask_simbrief_id)
 
     def mask_simbrief_id(self):
-        if self.simbrief_user.get().strip():
+        user_val = self.simbrief_user.get().strip()
+        if user_val:
             self.entry_sb.config(show="*")
+            self.save_simbrief_id(user_val)
 
     def quit_app(self):
         with self.data_lock:
@@ -689,6 +726,10 @@ class MB339NavApp:
         return coords_map
 
     def start_load_pln_thread(self):
+        user = self.simbrief_user.get().strip()
+        if user:
+            self.save_simbrief_id(user)
+
         file_path = filedialog.askopenfilename(
             title=self.t("dlg_open_pln"),
             filetypes=[("MSFS Flight Plan", "*.pln"), (self.t("dlg_all_files"), "*.*")]
@@ -779,6 +820,7 @@ class MB339NavApp:
             messagebox.showwarning(self.t("warn_title"), self.t("warn_sb_id"))
             return
 
+        self.save_simbrief_id(user)
         self.schedule_id_mask()
         self.lbl_status.config(text=self.t("status_loading"), fg="#ffb000")
         threading.Thread(target=self.load_simbrief, daemon=True).start()
