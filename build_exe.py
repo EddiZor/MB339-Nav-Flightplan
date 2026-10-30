@@ -5,7 +5,7 @@ import shutil
 import zipfile
 
 # Definisci qui la versione corrente dell'applicazione per aggiornare automaticamente lo ZIP
-APP_VERSION = "2.3"
+APP_VERSION = "3."
 # Assicurati che questo sia il nome esatto del tuo script Python principale
 MAIN_SCRIPT = "MB339-Nav-Flightplan.py"
 

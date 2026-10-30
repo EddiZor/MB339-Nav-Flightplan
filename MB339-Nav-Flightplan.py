@@ -28,6 +28,10 @@ TRANSLATIONS = {
         "load_pln": "Carica .PLN",
         "connect_msfs": "Connetti MSFS",
         "reconnect_msfs": "Riconnetti MSFS",
+        "rev_btn": "Inverti Rotta",
+        "rev_conf_title": "Conferma Inversione",
+        "rev_conf_msg": "Sei sicuro di voler invertire il piano di volo attuale? (I waypoint verranno percorsi al contrario).",
+        "warn_no_route_rev": "Nessuna rotta caricata da invertire!",
         "status_disc": "● Stato: Disconnesso da MSFS",
         "status_conn": "● Stato: Connesso a MSFS (SimConnect Attivo)",
         "status_err": "● Stato: Errore connessione MSFS",
@@ -100,6 +104,10 @@ TRANSLATIONS = {
         "load_pln": "Load .PLN",
         "connect_msfs": "Connect MSFS",
         "reconnect_msfs": "Reconnect MSFS",
+        "rev_btn": "Reverse Plan",
+        "rev_conf_title": "Confirm Reversal",
+        "rev_conf_msg": "Are you sure you want to reverse the current flight plan? (Waypoints will be sequenced backwards).",
+        "warn_no_route_rev": "No route loaded to reverse!",
         "status_disc": "● Status: Disconnected from MSFS",
         "status_conn": "● Status: Connected to MSFS (SimConnect Active)",
         "status_err": "● Status: MSFS Connection Error",
@@ -171,7 +179,7 @@ TRANSLATIONS = {
 class MB339NavApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("MB-339 SimBrief & PLN GPS Nav System v2.3")
+        self.root.title("MB-339 SimBrief & PLN GPS Nav System v3.0")
         self.root.geometry("1040x720") 
         self.root.configure(bg="#121417")
         self.root.resizable(False, False)
@@ -295,6 +303,7 @@ class MB339NavApp:
         self.btn_discord.config(text=self.t("discord_btn"))
         self.btn_sb.config(text=self.t("fetch_ofp"))
         self.btn_pln.config(text=self.t("load_pln"))
+        self.btn_reverse.config(text=self.t("rev_btn"))
 
         if self.conn_state == "conn":
             self.btn_conn.config(text=self.t("reconnect_msfs"))
@@ -339,7 +348,7 @@ class MB339NavApp:
 
     def open_discord(self):
         """Apre il link del server Discord SKYSIM PILOT nel browser predefinito."""
-        webbrowser.open("https://discord.gg/TUO_LINK_INVITO")
+        webbrowser.open("https://discord.gg/YYJEnge3SS")
 
     def setup_gps_icon(self):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
@@ -455,40 +464,44 @@ class MB339NavApp:
 
         self.btn_pln = tk.Button(cfg_frame, text=self.t("load_pln"), command=self.start_load_pln_thread, bg="#d97706", fg="white", activebackground="#b45309", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
         self.btn_pln.grid(row=0, column=3, padx=5, pady=5)
+        
+        # NUOVO PULSANTE INVERTI ROTTA (Sotto Load PLN)
+        self.btn_reverse = tk.Button(cfg_frame, text=self.t("rev_btn"), command=self.confirm_reverse_route, bg="#b32424", fg="white", activebackground="#d32f2f", activeforeground="white", font=("Segoe UI", 8, "bold"), relief="flat", padx=8, pady=2)
+        self.btn_reverse.grid(row=1, column=3, padx=5, pady=(0, 5), sticky="n")
 
         self.btn_conn = tk.Button(cfg_frame, text=self.t("connect_msfs"), command=self.connect_msfs, bg="#2d6a2e", fg="white", activebackground="#235423", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
         self.btn_conn.grid(row=0, column=4, padx=5, pady=5)
 
-        # Configuro la colonna 5 per riempire lo spazio vuoto e spingere il pannello telemetria a destra
+        # Configuro la colonna 5 per far espandere il pannello occupando tutto lo spazio a destra
         cfg_frame.grid_columnconfigure(5, weight=1)
 
-        # Nuovo pannello Telemetria Base (TAS, GS, ALT, WIND, MACH) espansivo a destra
-        self.basic_tel_frame = tk.Frame(cfg_frame, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=4, pady=4)
-        self.basic_tel_frame.grid(row=0, column=6, rowspan=2, padx=(10, 0), sticky="ew")
+        # Pannello Telemetria Base (TAS, GS, ALT, WIND, MACH)
+        self.basic_tel_frame = tk.Frame(cfg_frame, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=8, pady=4)
+        self.basic_tel_frame.grid(row=0, column=5, rowspan=3, padx=(25, 0), sticky="nsew") 
         
         for i in range(5):
             self.basic_tel_frame.grid_columnconfigure(i, weight=1)
 
-        tk.Label(self.basic_tel_frame, text="TAS (KT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=0)
-        tk.Label(self.basic_tel_frame, text="GS (KT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=1)
-        tk.Label(self.basic_tel_frame, text="ALT (FT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=2)
-        tk.Label(self.basic_tel_frame, text="WIND", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=3)
-        tk.Label(self.basic_tel_frame, text="MACH", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=4)
+        tk.Label(self.basic_tel_frame, text="TAS (KT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold")).grid(row=0, column=0)
+        tk.Label(self.basic_tel_frame, text="GS (KT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold")).grid(row=0, column=1)
+        tk.Label(self.basic_tel_frame, text="ALT (FT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold")).grid(row=0, column=2)
+        tk.Label(self.basic_tel_frame, text="WIND", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold")).grid(row=0, column=3)
+        tk.Label(self.basic_tel_frame, text="MACH", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 11, "bold")).grid(row=0, column=4)
 
-        self.lbl_tas = tk.Label(self.basic_tel_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_tas = tk.Label(self.basic_tel_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 20, "bold"))
         self.lbl_tas.grid(row=1, column=0, pady=(2, 0))
-        self.lbl_gs = tk.Label(self.basic_tel_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_gs = tk.Label(self.basic_tel_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 20, "bold"))
         self.lbl_gs.grid(row=1, column=1, pady=(2, 0))
-        self.lbl_alt = tk.Label(self.basic_tel_frame, text="---", fg="#3399ff", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_alt = tk.Label(self.basic_tel_frame, text="---", fg="#3399ff", bg="#0b0c0e", font=("Consolas", 20, "bold"))
         self.lbl_alt.grid(row=1, column=2, pady=(2, 0))
-        self.lbl_wind = tk.Label(self.basic_tel_frame, text="---°/--", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_wind = tk.Label(self.basic_tel_frame, text="---°/--", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 20, "bold"))
         self.lbl_wind.grid(row=1, column=3, pady=(2, 0))
-        self.lbl_mach = tk.Label(self.basic_tel_frame, text="-.--", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_mach = tk.Label(self.basic_tel_frame, text="-.--", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 20, "bold"))
         self.lbl_mach.grid(row=1, column=4, pady=(2, 0))
 
-        # ⚠️ ECCO LA RIGA CHE MANCAVA! Questa label gestisce lo stato di connessione in basso a sinistra.
+        # Etichetta di stato spostata alla riga 2 per non sovrapporsi al pulsante "Inverti Rotta"
         self.lbl_status = tk.Label(cfg_frame, text=self.t("status_disc"), fg="#ff5555", bg="#1a1d24", font=("Segoe UI", 9))
-        self.lbl_status.grid(row=1, column=0, columnspan=5, pady=(8, 0), sticky="w")
+        self.lbl_status.grid(row=2, column=0, columnspan=5, pady=(4, 0), sticky="w")
 
         # --- FRAME 2: Display Digitale Stile Radio/GPS (ESPANSIVO A TUTTA LARGHEZZA) ---
         nav_frame = tk.Frame(self.root, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=12, pady=12)
@@ -651,6 +664,30 @@ class MB339NavApp:
             except Exception:
                 pass
             self.howto_win = None
+
+    def confirm_reverse_route(self):
+        """Mostra una finestra di conferma prima di invertire la rotta."""
+        if not self.waypoints:
+            messagebox.showwarning(self.t("warn_title"), self.t("warn_no_route_rev"))
+            return
+            
+        if messagebox.askyesno(self.t("rev_conf_title"), self.t("rev_conf_msg")):
+            self.reverse_route()
+
+    def reverse_route(self):
+        """Inverte l'ordine dei waypoint e scambia partenza e destinazione."""
+        with self.data_lock:
+            # Inverte la lista dei waypoint
+            self.waypoints.reverse()
+            # Scambia DEP e DEST
+            self.origin_icao, self.dest_icao = self.dest_icao, self.origin_icao
+            # Azzera lo stato della navigazione
+            self.current_wp_index = 0
+            self.route_synced = False
+            self.route_completed = False
+            
+        # Aggiorna l'interfaccia (Tabella e Label DEP/DEST)
+        self.root.after(0, self.finalize_route_load)
 
     def on_id_activity(self, event=None):
         self.entry_sb.config(show="")
