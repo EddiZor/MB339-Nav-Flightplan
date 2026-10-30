@@ -339,7 +339,7 @@ class MB339NavApp:
 
     def open_discord(self):
         """Apre il link del server Discord SKYSIM PILOT nel browser predefinito."""
-        webbrowser.open("https://discord.gg/YYJEnge3SS")
+        webbrowser.open("https://discord.gg/TUO_LINK_INVITO")
 
     def setup_gps_icon(self):
         base_path = getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(__file__)))
@@ -459,6 +459,34 @@ class MB339NavApp:
         self.btn_conn = tk.Button(cfg_frame, text=self.t("connect_msfs"), command=self.connect_msfs, bg="#2d6a2e", fg="white", activebackground="#235423", activeforeground="white", font=("Segoe UI", 9, "bold"), relief="flat", padx=10, pady=4)
         self.btn_conn.grid(row=0, column=4, padx=5, pady=5)
 
+        # Configuro la colonna 5 per riempire lo spazio vuoto e spingere il pannello telemetria a destra
+        cfg_frame.grid_columnconfigure(5, weight=1)
+
+        # Nuovo pannello Telemetria Base (TAS, GS, ALT, WIND, MACH) espansivo a destra
+        self.basic_tel_frame = tk.Frame(cfg_frame, bg="#0b0c0e", bd=1, relief="solid", highlightbackground="#262b36", highlightthickness=1, padx=4, pady=4)
+        self.basic_tel_frame.grid(row=0, column=6, rowspan=2, padx=(10, 0), sticky="ew")
+        
+        for i in range(5):
+            self.basic_tel_frame.grid_columnconfigure(i, weight=1)
+
+        tk.Label(self.basic_tel_frame, text="TAS (KT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=0)
+        tk.Label(self.basic_tel_frame, text="GS (KT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=1)
+        tk.Label(self.basic_tel_frame, text="ALT (FT)", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=2)
+        tk.Label(self.basic_tel_frame, text="WIND", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=3)
+        tk.Label(self.basic_tel_frame, text="MACH", fg="#636e7b", bg="#0b0c0e", font=("Consolas", 10, "bold")).grid(row=0, column=4)
+
+        self.lbl_tas = tk.Label(self.basic_tel_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_tas.grid(row=1, column=0, pady=(2, 0))
+        self.lbl_gs = tk.Label(self.basic_tel_frame, text="---", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_gs.grid(row=1, column=1, pady=(2, 0))
+        self.lbl_alt = tk.Label(self.basic_tel_frame, text="---", fg="#3399ff", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_alt.grid(row=1, column=2, pady=(2, 0))
+        self.lbl_wind = tk.Label(self.basic_tel_frame, text="---°/--", fg="#4ec9b0", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_wind.grid(row=1, column=3, pady=(2, 0))
+        self.lbl_mach = tk.Label(self.basic_tel_frame, text="-.--", fg="#ffb000", bg="#0b0c0e", font=("Consolas", 16, "bold"))
+        self.lbl_mach.grid(row=1, column=4, pady=(2, 0))
+
+        # ⚠️ ECCO LA RIGA CHE MANCAVA! Questa label gestisce lo stato di connessione in basso a sinistra.
         self.lbl_status = tk.Label(cfg_frame, text=self.t("status_disc"), fg="#ff5555", bg="#1a1d24", font=("Segoe UI", 9))
         self.lbl_status.grid(row=1, column=0, columnspan=5, pady=(8, 0), sticky="w")
 
@@ -1019,6 +1047,24 @@ class MB339NavApp:
                     p_lon = self.aq.get("PLANE_LONGITUDE")
 
                     if p_lat is not None and p_lon is not None and p_lat != 0.0:
+                        
+                        # Estrazione Dati per Telemetria Base (TAS, GS, ALT, WIND, MACH)
+                        raw_tas = self.aq.get("AIRSPEED_TRUE")
+                        raw_gs = self.aq.get("GPS_GROUND_SPEED")
+                        raw_alt = self.aq.get("PLANE_ALTITUDE")
+                        raw_wind_dir = self.aq.get("AMBIENT_WIND_DIRECTION")
+                        raw_wind_vel = self.aq.get("AMBIENT_WIND_VELOCITY")
+                        raw_mach = self.aq.get("AIRSPEED_MACH")
+                        
+                        tas_val = raw_tas if raw_tas is not None else 0.0
+                        gs_val = raw_gs * 1.94384 if raw_gs is not None else 0.0
+                        alt_val = raw_alt if raw_alt is not None else 0.0
+                        wdir_val = raw_wind_dir if raw_wind_dir is not None else 0.0
+                        wvel_val = raw_wind_vel if raw_wind_vel is not None else 0.0
+                        mach_val = raw_mach if raw_mach is not None else 0.0
+                        
+                        self.root.after(0, self.update_basic_telemetry_ui, tas_val, gs_val, alt_val, wdir_val, wvel_val, mach_val)
+
                         with self.data_lock:
                             self.plane_lat = p_lat
                             self.plane_lon = p_lon
@@ -1069,14 +1115,8 @@ class MB339NavApp:
                             efob_str = "---"
                             
                             try:
-                                gs = self.aq.get("GPS_GROUND_SPEED")
-                                if gs is not None:
-                                    gs = gs * 1.94384 
-                                else:
-                                    gs = self.aq.get("AIRSPEED_TRUE")
-
-                                if gs is not None and gs > 30:
-                                    time_hours = total_dist_remaining / gs
+                                if gs_val > 30:
+                                    time_hours = total_dist_remaining / gs_val
                                     h = int(time_hours)
                                     m = int((time_hours - h) * 60)
                                     ete_str = f"{h:02d}:{m:02d}"
@@ -1114,22 +1154,37 @@ class MB339NavApp:
                                     except Exception:
                                         pass
 
-                                if dist_nm < 0.8:
-                                    with self.data_lock:
-                                        if self.current_wp_index < len(self.waypoints) - 1:
-                                            self.current_wp_index += 1
-                                            self.root.after(0, self.refresh_tree)
-                                        else:
-                                            self.nav_active = False
-                                            self.route_completed = True
-                                            self.root.after(0, self.btn_nav.config, {"text": self.t("route_done"), "bg": "#4ec9b0", "fg": "#121417"})
+                            if nav_act and dist_nm < 0.8:
+                                with self.data_lock:
+                                    if self.current_wp_index < len(self.waypoints) - 1:
+                                        self.current_wp_index += 1
+                                        self.root.after(0, self.refresh_tree)
+                                    else:
+                                        self.nav_active = False
+                                        self.route_completed = True
+                                        self.root.after(0, self.btn_nav.config, {"text": self.t("route_done"), "bg": "#4ec9b0", "fg": "#121417"})
                 except Exception:
                     with self.data_lock:
                         self.connected = False
                         self.conn_state = "disc"
                     self.root.after(0, lambda: self.lbl_status.config(text=self.t("status_disc"), fg="#ff5555"))
+                    self.root.after(0, self.update_basic_telemetry_ui, None, None, None, None, None, None)
             
             time.sleep(1)
+
+    def update_basic_telemetry_ui(self, tas, gs, alt, wind_dir, wind_vel, mach):
+        if tas is None or gs is None or alt is None:
+            self.lbl_tas.config(text="---")
+            self.lbl_gs.config(text="---")
+            self.lbl_alt.config(text="---")
+            self.lbl_wind.config(text="---°/--")
+            self.lbl_mach.config(text="-.--")
+        else:
+            self.lbl_tas.config(text=f"{int(round(tas))}")
+            self.lbl_gs.config(text=f"{int(round(gs))}")
+            self.lbl_alt.config(text=f"{int(round(alt))}")
+            self.lbl_wind.config(text=f"{int(round(wind_dir)):03d}°/{int(round(wind_vel))}")
+            self.lbl_mach.config(text=f"{mach:.2f}")
 
     def update_telemetry_ui(self, name, brg, dist_nm, ete_str, efob_str, xtk_str, xtk_color):
         self.lbl_wp_name.config(text=name)
