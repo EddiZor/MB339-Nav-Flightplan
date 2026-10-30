@@ -1,6 +1,22 @@
 # MB339-Nav-Flightplan
 
 
+## 🚀 Novità della Versione 3.0
+
+L'aggiornamento alla versione 3.0 introduce importanti novità per il monitoraggio del volo, la gestione della rotta e l'usabilità dell'interfaccia:
+
+*   **Pannello Telemetria Avanzata:** Aggiunto un nuovo display dinamico in alto a destra per il monitoraggio in tempo reale dei parametri di volo essenziali. Ora include:
+    *   **TAS** (True Airspeed in Nodi)
+    *   **GS** (Ground Speed in Nodi)
+    *   **ALT** (Altitudine attuale in Piedi)
+    *   **WIND** (Direzione e intensità del vento, es. 270°/15)
+    *   **MACH** (Numero di Mach)
+*   **Inversione Rotta (Reverse Plan):** Introdotto un pulsante dedicato ("Inverti Rotta") che permette di capovolgere istantaneamente il piano di volo caricato. Inverte l'ordine dei waypoint e scambia Partenza e Destinazione. È protetto da un pop-up di conferma per evitare clic accidentali.
+*   **Gestione Sicura del SimBrief ID:** L'ID utente di SimBrief non è più inserito nel codice. Viene ora salvato localmente in un file di configurazione automatico (`mb339_nav_config.json`). Mantiene la mascheratura di sicurezza (asterischi) dopo l'inserimento per garantire la privacy, risultando ideale per chi fa streaming.
+*   **Interfaccia Dinamica Espansiva (UI):** Il layout dei pannelli digitali stile "LED" è stato riprogettato. Ora i riquadri sfruttano dinamicamente tutta la larghezza orizzontale della finestra. Le dimensioni dei font sono state notevolmente ingrandite per garantire una lettura immediata dei parametri (ETE, EFOB, XTK, ecc.) a colpo d'occhio.
+*   **Integrazione Discord:** Aggiunto un pulsante diretto nella barra superiore per accedere istantaneamente al server Discord della community **SKYSIM PILOT**.
+
+
 MB339-Nav-Flightplan ✈️ (v2.3)
 
 An external GPS navigation and flight plan (SimBrief & .PLN) utility designed specifically for the IndiaFoxtEcho MB-339 in Microsoft Flight Simulator.
